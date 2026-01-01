@@ -4,8 +4,9 @@
 // Haupt-Layout für die gesamte Anwendung
 
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Playfair_Display, Amiri } from 'next/font/google';
+import { Outfit, Playfair_Display, Amiri, Poppins } from 'next/font/google';
 import './globals.css';
+import AnnouncementBanner from '@/components/AnnouncementBanner';
 
 // Schriftarten laden
 const outfit = Outfit({
@@ -24,6 +25,14 @@ const amiri = Amiri({
   subsets: ['arabic'],
   weight: ['400', '700'],
   variable: '--font-amiri',
+  display: 'swap',
+});
+
+// Moderne Schriftart für Banner
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
   display: 'swap',
 });
 
@@ -85,7 +94,7 @@ export default function RootLayout({
   return (
     <html 
       lang="de" 
-      className={`${outfit.variable} ${playfair.variable} ${amiri.variable}`}
+      className={`${outfit.variable} ${playfair.variable} ${amiri.variable} ${poppins.variable}`}
     >
       <head>
         {/* Preconnect für externe Ressourcen */}
@@ -93,6 +102,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="font-sans antialiased bg-background-light text-gray-900 min-h-screen">
+        {/* Ankündigungs-Banner - erscheint ganz oben */}
+        <AnnouncementBanner />
         {children}
       </body>
     </html>

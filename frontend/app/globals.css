@@ -255,3 +255,33 @@
   @apply bg-primary-600;
 }
 
+/* ===========================================
+   Ankündigungs-Banner Animation
+   =========================================== */
+
+/* Marquee Animation - scrollt von rechts nach links */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Animation Klasse */
+.animate-marquee {
+  animation: marquee linear infinite;
+}
+
+/* Animation pausieren bei Hover */
+.pause-animation {
+  animation-play-state: paused;
+}
+
+/* Banner Container */
+.announcement-banner {
+  /* Schatten für Tiefe */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+

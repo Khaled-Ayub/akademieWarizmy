@@ -1,7 +1,7 @@
 // ===========================================
 // WARIZMY EDUCATION - Startseite
 // ===========================================
-// Öffentliche Landingpage
+// Öffentliche Landingpage mit Strapi-Integration
 
 import Link from 'next/link';
 import { 
@@ -16,6 +16,18 @@ import {
   Globe,
   Video
 } from 'lucide-react';
+
+// Strapi API importieren
+import { 
+  getCourses, 
+  Course, 
+  getCategoryLabel, 
+  getLevelLabel,
+  getStrapiMediaUrl 
+} from '@/lib/strapi';
+
+// Ankündigungs-Banner importieren
+import AnnouncementBanner from '@/components/AnnouncementBanner';
 
 // Hero-Sektion
 function HeroSection() {
@@ -158,31 +170,39 @@ function FeaturesSection() {
   );
 }
 
-// Kurse-Preview
-function CoursesPreview() {
-  const courses = [
-    {
-      title: 'Arabisch für Anfänger',
-      level: 'Anfänger',
-      category: 'Arabisch',
-      students: 120,
-      rating: 4.9,
-    },
-    {
-      title: 'Tajweed Grundkurs',
-      level: 'Anfänger',
-      category: 'Quran',
-      students: 85,
-      rating: 5.0,
-    },
-    {
-      title: 'Islamische Geschichte',
-      level: 'Fortgeschritten',
-      category: 'Islam',
-      students: 64,
-      rating: 4.8,
-    },
-  ];
+// Kurse-Preview (Daten werden von Strapi geladen)
+async function CoursesPreview() {
+  // Kurse von Strapi abrufen
+  const courses = await getCourses();
+  
+  // Fallback wenn keine Kurse vorhanden
+  if (courses.length === 0) {
+    return (
+      <section className="py-20 bg-gray-50">
+        <div className="container-custom">
+          <div className="text-center">
+            <h2 className="section-title">Beliebte Kurse</h2>
+            <p className="section-subtitle mx-auto mb-8">
+              Unsere Kurse werden bald verfügbar sein.
+            </p>
+            <div className="bg-white rounded-xl p-8 shadow-sm max-w-md mx-auto">
+              <BookOpen className="w-12 h-12 text-primary-500 mx-auto mb-4" />
+              <p className="text-gray-600">
+                Fügen Sie Kurse in Strapi hinzu, um sie hier anzuzeigen.
+              </p>
+              <Link 
+                href="http://localhost:1337/admin" 
+                target="_blank"
+                className="btn-primary mt-4 inline-block"
+              >
+                Strapi Admin öffnen
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20 bg-gray-50">
@@ -204,16 +224,24 @@ function CoursesPreview() {
           </Link>
         </div>
         
-        {/* Course Cards */}
+        {/* Course Cards - Dynamisch von Strapi */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {courses.map((course, index) => (
-            <div key={course.title} className="card-hover">
-              {/* Thumbnail Placeholder */}
-              <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-600 relative">
-                <div className="absolute inset-0 pattern-overlay opacity-20" />
+          {courses.slice(0, 6).map((course) => (
+            <div key={course.id} className="card-hover">
+              {/* Thumbnail */}
+              <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-600 relative overflow-hidden">
+                {course.attributes.thumbnail?.data ? (
+                  <img 
+                    src={getStrapiMediaUrl(course.attributes.thumbnail.data)}
+                    alt={course.attributes.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 pattern-overlay opacity-20" />
+                )}
                 <div className="absolute bottom-4 left-4">
                   <span className="badge-primary">
-                    {course.category}
+                    {getCategoryLabel(course.attributes.category)}
                   </span>
                 </div>
               </div>
@@ -221,23 +249,34 @@ function CoursesPreview() {
               {/* Content */}
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="badge-secondary">{course.level}</span>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Star className="w-4 h-4 text-amber-400 fill-current mr-1" />
-                    {course.rating}
-                  </div>
+                  <span className="badge-secondary">
+                    {getLevelLabel(course.attributes.level)}
+                  </span>
+                  {course.attributes.price > 0 && (
+                    <span className="text-sm font-semibold text-primary-600">
+                      €{course.attributes.price}
+                    </span>
+                  )}
                 </div>
                 
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {course.title}
+                  {course.attributes.title}
                 </h3>
                 
+                {course.attributes.short_description && (
+                  <p className="text-gray-600 text-sm line-clamp-2">
+                    {course.attributes.short_description}
+                  </p>
+                )}
+                
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                  <span className="text-sm text-gray-500">
-                    {course.students} Studenten
-                  </span>
+                  {course.attributes.duration_weeks && (
+                    <span className="text-sm text-gray-500">
+                      {course.attributes.duration_weeks} Wochen
+                    </span>
+                  )}
                   <Link 
-                    href={`/kurse/${course.title.toLowerCase().replace(/ /g, '-')}`}
+                    href={`/kurse/${course.attributes.slug}`}
                     className="text-primary-500 font-medium hover:text-primary-600 text-sm"
                   >
                     Details →
@@ -399,14 +438,18 @@ function Footer() {
   );
 }
 
-// Hauptseite
-export default function HomePage() {
+// Hauptseite (Server Component mit async)
+export default async function HomePage() {
   return (
     <>
       <Header />
-      <main className="pt-16">
+      {/* Ankündigungs-Banner - fixed unter der Navbar */}
+      <AnnouncementBanner />
+      {/* Extra padding für Header (64px) + Banner (ca. 40px) */}
+      <main className="pt-[104px]">
         <HeroSection />
         <FeaturesSection />
+        {/* @ts-expect-error Async Server Component */}
         <CoursesPreview />
         <CTASection />
       </main>

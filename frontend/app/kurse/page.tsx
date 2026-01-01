@@ -1,0 +1,236 @@
+// ===========================================
+// WARIZMY EDUCATION - Kurse Übersicht
+// ===========================================
+// Zeigt alle verfügbaren Kurse von Strapi
+
+import Link from 'next/link';
+import { BookOpen, Star, Clock, Users, ChevronRight, Filter } from 'lucide-react';
+import { 
+  getCourses, 
+  Course, 
+  getCategoryLabel, 
+  getLevelLabel,
+  getStrapiMediaUrl 
+} from '@/lib/strapi';
+
+// Metadata für SEO
+export const metadata = {
+  title: 'Kurse | WARIZMY Education',
+  description: 'Entdecken Sie unsere Kurse für Arabisch und islamische Bildung.',
+};
+
+// Header Komponente (wiederverwendet)
+function Header() {
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+      <div className="container-custom">
+        <div className="flex items-center justify-between h-16">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-heading text-xl font-bold text-gray-900">
+              WARIZMY
+            </span>
+          </Link>
+          
+          <nav className="hidden md:flex items-center gap-8">
+            <Link href="/kurse" className="text-primary-500 font-medium">
+              Kurse
+            </Link>
+            <Link href="/ueber-uns" className="text-gray-600 hover:text-primary-500 font-medium">
+              Über uns
+            </Link>
+            <Link href="/faq" className="text-gray-600 hover:text-primary-500 font-medium">
+              FAQ
+            </Link>
+            <Link href="/kontakt" className="text-gray-600 hover:text-primary-500 font-medium">
+              Kontakt
+            </Link>
+          </nav>
+          
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="text-gray-600 hover:text-primary-500 font-medium hidden sm:block">
+              Anmelden
+            </Link>
+            <Link href="/registrieren" className="btn-primary py-2 px-4 text-sm">
+              Registrieren
+            </Link>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// Kurs-Karte Komponente
+function CourseCard({ course }: { course: Course }) {
+  return (
+    <div className="card-hover group">
+      {/* Thumbnail */}
+      <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-600 relative overflow-hidden">
+        {course.attributes.thumbnail?.data ? (
+          <img 
+            src={getStrapiMediaUrl(course.attributes.thumbnail.data)}
+            alt={course.attributes.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 pattern-overlay opacity-20" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <BookOpen className="w-16 h-16 text-white/50" />
+            </div>
+          </>
+        )}
+        
+        {/* Kategorie Badge */}
+        <div className="absolute bottom-4 left-4">
+          <span className="badge-primary">
+            {getCategoryLabel(course.attributes.category)}
+          </span>
+        </div>
+        
+        {/* Featured Badge */}
+        {course.attributes.is_featured && (
+          <div className="absolute top-4 right-4">
+            <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Star className="w-3 h-3 fill-current" />
+              Beliebt
+            </span>
+          </div>
+        )}
+      </div>
+      
+      {/* Content */}
+      <div className="p-6">
+        {/* Meta */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="badge-secondary">
+            {getLevelLabel(course.attributes.level)}
+          </span>
+          {course.attributes.duration_weeks && (
+            <span className="flex items-center text-sm text-gray-500">
+              <Clock className="w-4 h-4 mr-1" />
+              {course.attributes.duration_weeks} Wochen
+            </span>
+          )}
+        </div>
+        
+        {/* Titel */}
+        <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-500 transition-colors">
+          {course.attributes.title}
+        </h3>
+        
+        {/* Beschreibung */}
+        {course.attributes.short_description && (
+          <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+            {course.attributes.short_description}
+          </p>
+        )}
+        
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          {/* Preis */}
+          <div>
+            {course.attributes.price > 0 ? (
+              <span className="text-lg font-bold text-primary-600">
+                €{course.attributes.price}
+              </span>
+            ) : (
+              <span className="text-lg font-bold text-green-600">
+                Kostenlos
+              </span>
+            )}
+          </div>
+          
+          {/* Link */}
+          <Link 
+            href={`/kurse/${course.attributes.slug}`}
+            className="inline-flex items-center text-primary-500 font-medium hover:text-primary-600"
+          >
+            Details
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Leerer Zustand
+function EmptyState() {
+  return (
+    <div className="text-center py-20">
+      <div className="bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+        <BookOpen className="w-10 h-10 text-gray-400" />
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">
+        Noch keine Kurse verfügbar
+      </h3>
+      <p className="text-gray-600 mb-6 max-w-md mx-auto">
+        Unsere Kurse werden bald hier erscheinen. 
+        Fügen Sie Kurse in Strapi hinzu, um sie anzuzeigen.
+      </p>
+      <Link 
+        href="http://localhost:1337/admin/content-manager/collectionType/api::course.course"
+        target="_blank"
+        className="btn-primary"
+      >
+        Kurs in Strapi erstellen
+      </Link>
+    </div>
+  );
+}
+
+// Hauptseite
+export default async function KursePage() {
+  // Kurse von Strapi laden
+  const courses = await getCourses();
+
+  return (
+    <>
+      <Header />
+      <main className="pt-16">
+        {/* Hero */}
+        <section className="bg-gradient-to-br from-primary-500/10 via-background-light to-secondary-500/10 py-16">
+          <div className="container-custom">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                Unsere Kurse
+              </h1>
+              <p className="text-lg text-gray-600">
+                Entdecken Sie unser vielfältiges Angebot an Kursen für 
+                Arabisch und islamische Bildung.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Kurse Grid */}
+        <section className="py-16">
+          <div className="container-custom">
+            {courses.length > 0 ? (
+              <>
+                {/* Anzahl */}
+                <p className="text-gray-600 mb-8">
+                  {courses.length} Kurs{courses.length !== 1 ? 'e' : ''} gefunden
+                </p>
+                
+                {/* Grid */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {courses.map((course) => (
+                    <CourseCard key={course.id} course={course} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <EmptyState />
+            )}
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+

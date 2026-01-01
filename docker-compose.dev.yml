@@ -4,8 +4,6 @@
 # Starten: docker-compose -f docker-compose.dev.yml up -d
 # Mit Hot-Reload für Frontend und Backend
 
-version: '3.9'
-
 services:
   # -------------------------------------------
   # PostgreSQL für FastAPI (Anwendungsdaten)
@@ -37,7 +35,7 @@ services:
       POSTGRES_PASSWORD: warizmy_dev_password
       POSTGRES_DB: warizmy_strapi
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_strapi_dev:/var/lib/postgresql/data
     networks:
@@ -122,6 +120,8 @@ services:
       ADMIN_JWT_SECRET: strapi_dev_admin_jwt_secret
       APP_KEYS: key1,key2,key3,key4
       API_TOKEN_SALT: strapi_dev_api_token_salt
+      # OpenAI API Key für AI-Assistent
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "1337:1337"
     volumes:
@@ -145,7 +145,7 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api
       NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
       - ./frontend/app:/app/app:ro
       - ./frontend/components:/app/components:ro
