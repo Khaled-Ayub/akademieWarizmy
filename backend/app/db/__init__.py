@@ -1,8 +1,7 @@
 # ===========================================
-# WARIZMY EDUCATION - Database Wrapper (Legacy)
+# WARIZMY EDUCATION - Database Package
 # ===========================================
-# Re-exportiert alles aus app.db für Abwärtskompatibilität
-# HINWEIS: Neue Imports sollten app.db verwenden
+# Datenbankverbindung und Session-Management
 
 from app.db.session import (
     engine,
@@ -15,9 +14,10 @@ from app.db.base import Base
 
 __all__ = [
     "engine",
-    "AsyncSessionLocal",
-    "Base",
+    "AsyncSessionLocal", 
     "get_db",
     "init_db",
     "close_db",
+    "Base",
 ]
+

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 
-from app.database import get_db
+from app.db.session import get_db
 from app.models.user import User
 from app.models.enrollment import Enrollment, LessonProgress, EnrollmentType, EnrollmentStatus
 from app.routers.auth import get_current_user

@@ -9,7 +9,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, Date, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.db.base import Base
 
 
 class Holiday(Base):

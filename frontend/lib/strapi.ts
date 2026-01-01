@@ -384,6 +384,31 @@ export interface Announcement {
   };
 }
 
+// Tageshinweis (Wochentag / Ramadan)
+export interface DailyGuidance {
+  id: number;
+  attributes: StrapiAttributes & {
+    title?: string;
+    text: string;
+    weekday:
+      | 'monday'
+      | 'tuesday'
+      | 'wednesday'
+      | 'thursday'
+      | 'friday'
+      | 'saturday'
+      | 'sunday'
+      | 'everyday';
+    ramadan_mode: 'only' | 'exclude' | 'both';
+    is_active: boolean;
+    priority: number;
+    start_date?: string;
+    end_date?: string;
+    link_url?: string;
+    link_text?: string;
+  };
+}
+
 /**
  * Aktive Ankündigungen abrufen
  * Filtert nach: aktiv, veröffentlicht, im gültigen Zeitraum
@@ -407,6 +432,65 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     return filtered;
   } catch (error) {
     console.error('Error fetching announcements:', error);
+    return [];
+  }
+}
+
+// =========================================
+// Tageshinweise API
+// =========================================
+
+/**
+ * Tageshinweise für einen Wochentag abrufen.
+ *
+ * Regel:
+ * - Holt Einträge für `weekday` ODER `everyday`
+ * - Filtert nach aktiv
+ * - Filtert nach Ramadan-Mode (only/exclude/both)
+ * - Filtert client-/serverseitig nach Datum (start/end) wie bei announcements
+ */
+export async function getDailyGuidances(params: {
+  weekday:
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday'
+    | 'saturday'
+    | 'sunday';
+  isRamadan: boolean;
+  limit?: number;
+}): Promise<DailyGuidance[]> {
+  const { weekday, isRamadan, limit = 5 } = params;
+
+  try {
+    const ramadanMode = isRamadan ? 'only' : 'exclude';
+
+    // Wir holen (weekday OR everyday) und (ramadan_mode == both OR ramadan_mode == ramadanMode)
+    // Hinweis: Strapi OR-Filter ist etwas verbose, daher bauen wir den Query direkt.
+    const endpoint =
+      `/daily-guidances?` +
+      `filters[is_active][$eq]=true&` +
+      `filters[$or][0][weekday][$eq]=${weekday}&` +
+      `filters[$or][1][weekday][$eq]=everyday&` +
+      `filters[$and][0][$or][0][ramadan_mode][$eq]=both&` +
+      `filters[$and][0][$or][1][ramadan_mode][$eq]=${ramadanMode}&` +
+      `sort=priority:desc&` +
+      `pagination[limit]=${limit}`;
+
+    const response = await fetchStrapi<StrapiResponse<DailyGuidance>>(endpoint);
+
+    // Datum-Fenster filtern (start/end)
+    const now = new Date();
+    const filtered = (response.data || []).filter((d) => {
+      const startOk = !d.attributes.start_date || new Date(d.attributes.start_date) <= now;
+      const endOk = !d.attributes.end_date || new Date(d.attributes.end_date) >= now;
+      return startOk && endOk;
+    });
+
+    return filtered;
+  } catch (error) {
+    console.error('Error fetching daily guidances:', error);
     return [];
   }
 }

@@ -26,11 +26,30 @@ import {
   getStrapiMediaUrl 
 } from '@/lib/strapi';
 
+// Hijri Datum + Tages-Empfehlung (Islam)
+import { getIslamicDailyInfo } from '@/lib/islamicDate';
+import { getDailyGuidances } from '@/lib/strapi';
+
 // Ankündigungs-Banner importieren
 import AnnouncementBanner from '@/components/AnnouncementBanner';
 
 // Hero-Sektion
-function HeroSection() {
+async function HeroSection() {
+  const islamicToday = getIslamicDailyInfo();
+  const strapiGuidances =
+    islamicToday
+      ? await getDailyGuidances({
+          weekday: islamicToday.weekdayKey,
+          isRamadan: islamicToday.isRamadan,
+          limit: 3,
+        })
+      : [];
+
+  const guidanceFromStrapi =
+    strapiGuidances.length > 0
+      ? strapiGuidances.map((g) => g.attributes.text).join(' ')
+      : null;
+
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Hintergrund mit Muster */}
@@ -44,6 +63,25 @@ function HeroSection() {
             <Star className="w-4 h-4 fill-current" />
             <span>Neue Kurse verfügbar</span>
           </div>
+
+          {/* Hijri Datum + Wochentag + Empfehlung */}
+          {islamicToday && (
+            <div className="mb-6 inline-flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 backdrop-blur-sm animate-fade-in">
+              <div className="text-sm text-gray-700">
+                <span className="font-semibold">
+                  {islamicToday.weekday}
+                </span>
+                <span className="mx-2 text-gray-300">•</span>
+                <span>
+                  {islamicToday.hijriFormatted}
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-gray-700">Empfehlung für heute:</span>{' '}
+                {guidanceFromStrapi || islamicToday.guidance}
+              </div>
+            </div>
+          )}
           
           {/* Titel */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight animate-slide-up">
@@ -447,6 +485,7 @@ export default async function HomePage() {
       <AnnouncementBanner />
       {/* Extra padding für Header (64px) + Banner (ca. 40px) */}
       <main className="pt-[104px]">
+        {/* @ts-expect-error Async Server Component */}
         <HeroSection />
         <FeaturesSection />
         {/* @ts-expect-error Async Server Component */}

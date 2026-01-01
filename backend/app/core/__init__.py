@@ -1,9 +1,9 @@
 # ===========================================
-# WARIZMY EDUCATION - Config Wrapper (Legacy)
+# WARIZMY EDUCATION - Core Package
 # ===========================================
-# Re-exportiert alles aus app.core.config für Abwärtskompatibilität
-# HINWEIS: Neue Imports sollten app.core.config verwenden
+# Zentrale Konfiguration und Hilfsfunktionen
 
 from app.core.config import Settings, get_settings
 
 __all__ = ["Settings", "get_settings"]
+

@@ -9,10 +9,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config import get_settings
-from app.database import init_db, close_db
+# Core: Konfiguration
+from app.core.config import get_settings
 
-# Router importieren
+# DB: Datenbankverbindung
+from app.db.session import init_db, close_db
+
+# API: Router importieren
 from app.routers import auth, users, classes, enrollments, sessions, payments, exams, certificates, admin
 
 # Settings laden
@@ -69,6 +72,7 @@ app = FastAPI(
 # Erlaubte Origins (Frontends, die auf die API zugreifen dürfen)
 allowed_origins = [
     "http://localhost:3000",           # Next.js Dev
+    "http://localhost:3002",           # Next.js Dev (Docker)
     "https://ac.warizmy.com",          # Produktion
 ]
 
@@ -184,4 +188,3 @@ async def api_info():
         "docs": "/api/docs" if settings.DEBUG else "Deaktiviert in Produktion",
         "health": "/api/health",
     }
-

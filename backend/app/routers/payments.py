@@ -11,8 +11,8 @@ from sqlalchemy import select
 from pydantic import BaseModel
 import stripe
 
-from app.database import get_db
-from app.config import get_settings
+from app.db.session import get_db
+from app.core.config import get_settings
 from app.models.user import User
 from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.enrollment import Enrollment, EnrollmentType, EnrollmentStatus

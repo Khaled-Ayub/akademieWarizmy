@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
 
-from app.database import get_db
-from app.config import get_settings
+from app.db.session import get_db
+from app.core.config import get_settings
 from app.models.user import User
 from app.models.exam import ExamSlot, ExamBooking, ExamBookingStatus, ExamResult
 from app.models.session import Attendance, AttendanceStatus

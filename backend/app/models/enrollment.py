@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import enum
 
-from app.database import Base
+from app.db.base import Base
 
 
 class EnrollmentType(str, enum.Enum):

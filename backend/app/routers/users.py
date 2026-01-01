@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
-from app.database import get_db
+from app.db.session import get_db
 from app.models.user import User
 from app.models.class_model import ClassEnrollment
 from app.models.enrollment import Enrollment, LessonProgress

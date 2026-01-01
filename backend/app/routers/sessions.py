@@ -11,7 +11,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
-from app.database import get_db
+from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.models.session import LiveSession, AttendanceConfirmation, Attendance, AttendanceStatus
 from app.models.class_model import ClassEnrollment
