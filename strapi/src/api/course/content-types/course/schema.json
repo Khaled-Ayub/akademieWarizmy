@@ -1,0 +1,102 @@
+{
+  "kind": "collectionType",
+  "collectionName": "courses",
+  "info": {
+    "singularName": "course",
+    "pluralName": "courses",
+    "displayName": "Kurs",
+    "description": "Kurse und Seminare"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 255
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title"
+    },
+    "description": {
+      "type": "richtext"
+    },
+    "short_description": {
+      "type": "text",
+      "maxLength": 500
+    },
+    "thumbnail": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "preview_video_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "price": {
+      "type": "decimal",
+      "min": 0
+    },
+    "price_type": {
+      "type": "enumeration",
+      "enum": ["one_time", "subscription", "both"],
+      "default": "one_time"
+    },
+    "subscription_price": {
+      "type": "decimal",
+      "min": 0
+    },
+    "course_type": {
+      "type": "enumeration",
+      "enum": ["course", "seminar"],
+      "default": "course"
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": ["arabic", "islamic"],
+      "required": true
+    },
+    "level": {
+      "type": "enumeration",
+      "enum": ["beginner", "intermediate", "advanced"],
+      "default": "beginner"
+    },
+    "book_affiliate_link": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "book_pdf": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["files"]
+    },
+    "lessons": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::lesson.lesson",
+      "mappedBy": "course"
+    },
+    "teachers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::teacher.teacher",
+      "inversedBy": "courses"
+    },
+    "testimonials": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::testimonial.testimonial",
+      "mappedBy": "course"
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}
+

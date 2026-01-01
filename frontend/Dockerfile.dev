@@ -1,0 +1,23 @@
+# ===========================================
+# WARIZMY EDUCATION - Frontend Dockerfile (Entwicklung)
+# ===========================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Package Files kopieren
+COPY package*.json ./
+
+# Dependencies installieren
+RUN npm install
+
+# Anwendungscode kopieren
+COPY . .
+
+# Port freigeben
+EXPOSE 3000
+
+# Entwicklungsserver starten
+CMD ["npm", "run", "dev"]
+

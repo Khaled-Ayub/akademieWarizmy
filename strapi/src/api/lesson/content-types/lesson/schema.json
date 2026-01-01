@@ -1,0 +1,70 @@
+{
+  "kind": "collectionType",
+  "collectionName": "lessons",
+  "info": {
+    "singularName": "lesson",
+    "pluralName": "lessons",
+    "displayName": "Lektion",
+    "description": "Lektionen innerhalb eines Kurses"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 255
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title"
+    },
+    "description": {
+      "type": "richtext"
+    },
+    "order": {
+      "type": "integer",
+      "required": true,
+      "default": 0
+    },
+    "vimeo_video_id": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "vimeo_video_url": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "duration_minutes": {
+      "type": "integer",
+      "min": 0
+    },
+    "materials": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": ["files", "images"]
+    },
+    "has_quiz": {
+      "type": "boolean",
+      "default": false
+    },
+    "quiz": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::quiz.quiz"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course",
+      "inversedBy": "lessons"
+    },
+    "is_free_preview": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}
+
