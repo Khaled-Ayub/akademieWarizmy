@@ -87,7 +87,10 @@ async def upload_file(
         protocol = "https" if settings.MINIO_USE_SSL else "http"
         
         # Externe URL (für Browser)
-        if "localhost" in settings.MINIO_ENDPOINT or "minio" in settings.MINIO_ENDPOINT:
+        if settings.MINIO_PUBLIC_URL:
+            # Cloudflare R2 oder andere CDN mit Public URL
+            external_url = f"{settings.MINIO_PUBLIC_URL}/{filename}"
+        elif "localhost" in settings.MINIO_ENDPOINT or "minio" in settings.MINIO_ENDPOINT:
             external_url = f"http://localhost:9000/{bucket_name}/{filename}"
         else:
             external_url = f"{protocol}://{settings.MINIO_ENDPOINT}/{bucket_name}/{filename}"

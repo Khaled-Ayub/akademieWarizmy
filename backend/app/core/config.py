@@ -43,13 +43,15 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # =========================================
-    # MinIO / S3
+    # MinIO / S3 / Cloudflare R2
     # =========================================
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_BUCKET_NAME: str = "warizmy"
     MINIO_USE_SSL: bool = False
+    # Cloudflare R2 Public URL (z.B. https://pub-xxx.r2.dev)
+    MINIO_PUBLIC_URL: Optional[str] = None
     
     # =========================================
     # Stripe (Zahlungen)
