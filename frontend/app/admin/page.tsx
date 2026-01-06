@@ -135,7 +135,6 @@ function QuickActions() {
           <Link
             key={action.href}
             href={action.href}
-            target={action.external ? '_blank' : undefined}
             className={`flex items-center gap-2 p-3 rounded-lg transition-colors ${action.color}`}
           >
             <action.icon className="w-5 h-5" />

@@ -451,8 +451,8 @@ export default async function LessonPage({
             <div className="lg:col-span-3 space-y-6">
               {/* Video Player */}
               <VimeoPlayer 
-                videoId={lesson.vimeo_video_id} 
-                videoUrl={lesson.vimeo_video_url}
+                videoId={lesson.vimeo_video_id || undefined} 
+                videoUrl={lesson.vimeo_video_url || undefined}
                 title={lesson.title}
               />
               

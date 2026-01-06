@@ -140,7 +140,7 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
         throw new Error('Liste nicht gefunden');
       }
     } catch (error) {
-      showToast('error', 'Fehler', 'Liste konnte nicht geladen werden');
+      showToast('Liste konnte nicht geladen werden', 'error');
       router.push('/admin/vokabeln');
     } finally {
       setLoading(false);
@@ -164,12 +164,12 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
       if (res.ok) {
         const updated = await res.json();
         setList(prev => prev ? { ...prev, ...updated } : null);
-        showToast('success', 'Gespeichert');
+        showToast('Gespeichert', 'success');
       } else {
         throw new Error('Fehler beim Speichern');
       }
     } catch (error) {
-      showToast('error', 'Fehler', (error as Error).message);
+      showToast((error as Error).message, 'error');
     } finally {
       setSaving(false);
     }
@@ -186,7 +186,7 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
   // =========================================
   const addItem = async () => {
     if (!list || !newItem.arabic?.trim() || !newItem.german?.trim()) {
-      showToast('error', 'Fehler', 'Arabisch und Deutsch sind erforderlich');
+      showToast('Arabisch und Deutsch sind erforderlich', 'error');
       return;
     }
 
@@ -209,10 +209,10 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
         } : null);
         setNewItem({ arabic: '', german: '', difficulty: 1 });
         setShowAddForm(false);
-        showToast('success', 'Vokabel hinzugefügt');
+        showToast('Vokabel hinzugefügt', 'success');
       }
     } catch (error) {
-      showToast('error', 'Fehler', 'Vokabel konnte nicht hinzugefügt werden');
+      showToast('Vokabel konnte nicht hinzugefügt werden', 'error');
     }
   };
 
@@ -232,10 +232,10 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
         } : null);
         setEditingItem(null);
         setEditForm({});
-        showToast('success', 'Vokabel aktualisiert');
+        showToast('Vokabel aktualisiert', 'success');
       }
     } catch (error) {
-      showToast('error', 'Fehler', 'Vokabel konnte nicht aktualisiert werden');
+      showToast('Vokabel konnte nicht aktualisiert werden', 'error');
     }
   };
 
@@ -253,10 +253,10 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
           items: prev.items.filter(item => item.id !== itemId),
           item_count: prev.item_count - 1,
         } : null);
-        showToast('success', 'Vokabel gelöscht');
+        showToast('Vokabel gelöscht', 'success');
       }
     } catch (error) {
-      showToast('error', 'Fehler', 'Vokabel konnte nicht gelöscht werden');
+      showToast('Vokabel konnte nicht gelöscht werden', 'error');
     }
   };
 
@@ -265,7 +265,7 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
   // =========================================
   const generateWithAI = async () => {
     if (!list || !aiTopic.trim()) {
-      showToast('error', 'Fehler', 'Bitte gib ein Thema ein');
+      showToast('Bitte gib ein Thema ein', 'error');
       return;
     }
 
@@ -276,7 +276,8 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic: aiTopic,
-          category: list.category,
+          word_type: list.word_type,
+          category: list.noun_category || list.verb_category || list.particle_category,
           level: list.level,
           count: aiCount,
         }),
@@ -287,13 +288,13 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
         setList(updated);
         setAiTopic('');
         setShowAiPanel(false);
-        showToast('success', `${aiCount} Vokabeln generiert!`, 'Die KI hat neue Vokabeln erstellt.');
+        showToast(`${aiCount} Vokabeln generiert!`, 'success');
       } else {
         const error = await res.json();
         throw new Error(error.detail || 'KI-Generierung fehlgeschlagen');
       }
     } catch (error) {
-      showToast('error', 'KI-Fehler', (error as Error).message);
+      showToast((error as Error).message, 'error');
     } finally {
       setAiGenerating(false);
     }
@@ -311,13 +312,12 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
       if (res.ok) {
         const result = await res.json();
         await fetchList(); // Refresh to get updated verification status
-        showToast('success', 'Überprüfung abgeschlossen', 
-          `${result.correct_count}/${result.verified_count} Vokabeln korrekt`);
+        showToast(`Überprüfung abgeschlossen: ${result.correct_count}/${result.verified_count} Vokabeln korrekt`, 'success');
       } else {
         throw new Error('Überprüfung fehlgeschlagen');
       }
     } catch (error) {
-      showToast('error', 'KI-Fehler', (error as Error).message);
+      showToast((error as Error).message, 'error');
     } finally {
       setAiVerifying(false);
     }
@@ -539,7 +539,7 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
                       className="w-full px-3 py-2 bg-slate-800/50 border border-white/10 rounded-lg text-white focus:outline-none focus:border-amber-500/50"
                     >
                       <option value="">Auswählen...</option>
-                      {WORD_TYPES.map(type => (
+                      {ITEM_WORD_TYPES.map(type => (
                         <option key={type.value} value={type.value}>{type.label}</option>
                       ))}
                     </select>
@@ -711,15 +711,13 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
 
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Kategorie</label>
-                  <select
-                    value={list.category}
-                    onChange={(e) => updateList({ category: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-white/10 rounded-lg text-white focus:outline-none focus:border-amber-500/50"
-                  >
-                    {CATEGORIES.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={list.noun_category || list.verb_category || list.particle_category || ''}
+                    readOnly
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-white/10 rounded-lg text-white/50 cursor-not-allowed"
+                    placeholder="Kategorie (basierend auf Worttyp)"
+                  />
                 </div>
 
                 <div>
@@ -826,7 +824,7 @@ export default function VocabularyListDetailPage({ params }: { params: Promise<{
                     className="w-full px-3 py-2 bg-slate-700/50 border border-white/10 rounded-lg text-white focus:outline-none focus:border-amber-500/50"
                   >
                     <option value="">Auswählen...</option>
-                    {WORD_TYPES.map(type => (
+                    {ITEM_WORD_TYPES.map(type => (
                       <option key={type.value} value={type.value}>{type.label}</option>
                     ))}
                   </select>

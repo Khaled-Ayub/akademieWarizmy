@@ -233,7 +233,7 @@ export default function NewVocabularyListPage() {
   const confirmVocabularyItem = (id: string) => {
     const item = vocabularyItems.find(v => v.id === id);
     if (!item?.arabic.trim() || !item?.german.trim()) {
-      showToast('error', 'Fehler', 'Arabisch und Deutsch sind erforderlich');
+      showToast('Arabisch und Deutsch sind erforderlich', 'error');
       return;
     }
     updateVocabularyItem(id, { isEditing: false, isNew: false });
@@ -245,7 +245,7 @@ export default function NewVocabularyListPage() {
   // =========================================
   const generateWithAI = async () => {
     if (!aiTopic.trim()) {
-      showToast('error', 'Fehler', 'Bitte gib ein Thema ein');
+      showToast('Bitte gib ein Thema ein', 'error');
       return;
     }
 
@@ -310,11 +310,11 @@ export default function NewVocabularyListPage() {
 
       setVocabularyItems([...vocabularyItems, ...newItems]);
       setAiTopic('');
-      showToast('success', `${newItems.length} Vokabeln generiert!`, 'Überprüfe und bearbeite sie bei Bedarf.');
+      showToast(`${newItems.length} Vokabeln generiert!`, 'success');
       
     } catch (error) {
       console.error('❌ KI-Generierung Fehler:', error);
-      showToast('error', 'KI-Fehler', (error as Error).message);
+      showToast((error as Error).message, 'error');
     } finally {
       setAiGenerating(false);
     }
@@ -325,7 +325,7 @@ export default function NewVocabularyListPage() {
   // =========================================
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
-      showToast('error', 'Titel erforderlich', 'Bitte gib einen Titel ein.');
+      showToast('Bitte gib einen Titel ein', 'error');
       return;
     }
 
@@ -388,11 +388,11 @@ export default function NewVocabularyListPage() {
         });
       }
 
-      showToast('success', 'Vokabelliste erstellt!', `${validItems.length} Vokabeln wurden hinzugefügt.`);
+      showToast(`Vokabelliste erstellt! ${validItems.length} Vokabeln wurden hinzugefügt.`, 'success');
       router.push(`/admin/vokabeln/${createdList.id}`);
       
     } catch (error) {
-      showToast('error', 'Fehler', (error as Error).message);
+      showToast((error as Error).message, 'error');
     } finally {
       setSaving(false);
     }
@@ -761,7 +761,7 @@ export default function NewVocabularyListPage() {
                       item={item}
                       index={index}
                       wordType={formData.word_type}
-                      isEditing={editingItemId === item.id || item.isEditing}
+                      isEditing={editingItemId === item.id || !!item.isEditing}
                       onUpdate={(updates) => updateVocabularyItem(item.id, updates)}
                       onDelete={() => deleteVocabularyItem(item.id)}
                       onEdit={() => {

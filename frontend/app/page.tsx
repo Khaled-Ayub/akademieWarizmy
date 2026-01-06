@@ -508,12 +508,10 @@ export default async function HomePage() {
       <AnnouncementBanner />
       {/* Extra padding für Header (64px) + Banner (ca. 40px) */}
       <main className="pt-[104px]">
-        {/* @ts-expect-error Async Server Component */}
         <HeroSection />
         <FeaturesSection />
         {/* Unterrichtsplan-Kalender */}
         <ScheduleCalendar />
-        {/* @ts-expect-error Async Server Component */}
         <CoursesPreview />
         {/* Newsletter Sektion */}
         <section className="py-16 bg-white">
