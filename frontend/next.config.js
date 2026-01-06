@@ -21,7 +21,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'ac.warizmy.com',
+        hostname: 'ac.warizmyacademy.de',
+      },
+      {
+        protocol: 'https',
+        hostname: 'acbackend.warizmyacademy.de',
       },
       {
         protocol: 'http',
@@ -30,6 +34,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'i.vimeocdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vimeo.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.amazonaws.com',
       },
     ],
   },

@@ -57,10 +57,10 @@ app = FastAPI(
     description="API für die WARIZMY Education Lernplattform",
     version=settings.APP_VERSION,
     # API-Dokumentation unter /docs (Swagger) und /redoc
-    docs_url="/api/docs" if settings.DEBUG else None,
-    redoc_url="/api/redoc" if settings.DEBUG else None,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
     # OpenAPI Schema
-    openapi_url="/api/openapi.json" if settings.DEBUG else None,
+    openapi_url="/api/openapi.json",
     # Lifecycle-Manager
     lifespan=lifespan,
 )
@@ -69,12 +69,8 @@ app = FastAPI(
 # =========================================
 # CORS Middleware
 # =========================================
-# Erlaubte Origins (Frontends, die auf die API zugreifen dürfen)
-allowed_origins = [
-    "http://localhost:3000",           # Next.js Dev
-    "http://localhost:3002",           # Next.js Dev (Docker)
-    "https://ac.warizmy.com",          # Produktion
-]
+# Erlaubte Origins aus Config laden (kommasepariert)
+allowed_origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",")]
 
 app.add_middleware(
     CORSMiddleware,

@@ -90,9 +90,14 @@ class Settings(BaseSettings):
     EMAIL_FROM_NAME: str = "WARIZMY Education"
     
     # =========================================
+    # CORS (Cross-Origin Resource Sharing)
+    # =========================================
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3002,https://ac.warizmyacademy.de"
+    
+    # =========================================
     # Frontend URLs (für E-Mail-Links)
     # =========================================
-    FRONTEND_URL: str = "https://ac.warizmy.com"
+    FRONTEND_URL: str = "https://ac.warizmyacademy.de"
     
     # =========================================
     # Sentry (Error Tracking)
