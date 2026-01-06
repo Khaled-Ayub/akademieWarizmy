@@ -13,13 +13,26 @@ from pydantic import BaseModel, EmailStr
 import uuid
 
 from app.db.session import get_db
-from app.models.user import User, UserRole
-from app.models.class_model import Class, ClassSchedule, ClassEnrollment, ClassTeacher, SessionType as ClassSessionType
-from app.models.session import LiveSession, Attendance, AttendanceStatus, SessionType
-from app.models.payment import Payment, PaymentStatus
-from app.models.exam import ExamSlot, ExamBooking, ExamBookingStatus, ExamResult
-from app.models.certificate import Certificate
-from app.models.holiday import Holiday
+from app.models import (
+    User,
+    UserRole,
+    Class,
+    ClassSchedule,
+    ClassEnrollment,
+    ClassTeacher,
+    SessionType,
+    LiveSession,
+    Attendance,
+    AttendanceStatus,
+    Payment,
+    PaymentStatus,
+    ExamSlot,
+    ExamBooking,
+    ExamBookingStatus,
+    ExamResult,
+    Certificate,
+    Holiday,
+)
 from app.routers.auth import get_current_user, require_role, get_password_hash
 
 router = APIRouter()
@@ -47,7 +60,7 @@ class UserUpdateAdmin(BaseModel):
 
 class ClassCreate(BaseModel):
     """Schema für Klassen-Erstellung"""
-    strapi_course_id: int
+    course_id: str
     name: str
     description: Optional[str] = None
     start_date: date
@@ -67,7 +80,7 @@ class ClassScheduleCreate(BaseModel):
 class SessionCreate(BaseModel):
     """Schema für Session-Erstellung"""
     class_id: str
-    strapi_course_id: int
+    course_id: str
     title: str
     description: Optional[str] = None
     session_type: str = "online"
@@ -87,7 +100,7 @@ class AttendanceUpdate(BaseModel):
 class ExamSlotCreate(BaseModel):
     """Schema für Prüfungstermin-Erstellung"""
     class_id: str
-    strapi_course_id: int
+    course_id: str
     scheduled_at: datetime
     duration_minutes: int = 30
 
@@ -111,7 +124,7 @@ class HolidayCreate(BaseModel):
 class CertificateIssue(BaseModel):
     """Schema für Zertifikats-Ausstellung"""
     user_id: str
-    strapi_course_id: int
+    course_id: str
     exam_booking_id: Optional[str] = None
 
 
@@ -294,7 +307,7 @@ async def list_classes(
         {
             "id": str(c.id),
             "name": c.name,
-            "strapi_course_id": c.strapi_course_id,
+            "course_id": c.course_id,
             "start_date": c.start_date.isoformat(),
             "end_date": c.end_date.isoformat() if c.end_date else None,
             "student_count": len([e for e in c.enrollments if e.status.value == "active"]),
@@ -313,7 +326,7 @@ async def create_class(
 ):
     """Neue Klasse erstellen"""
     class_ = Class(
-        strapi_course_id=data.strapi_course_id,
+        course_id=data.course_id,
         name=data.name,
         description=data.description,
         start_date=data.start_date,
@@ -385,7 +398,7 @@ async def create_session(
     """Neue Session erstellen"""
     session = LiveSession(
         class_id=data.class_id,
-        strapi_course_id=data.strapi_course_id,
+        course_id=data.course_id,
         title=data.title,
         description=data.description,
         session_type=SessionType(data.session_type),
@@ -534,7 +547,7 @@ async def create_exam_slot(
     """Prüfungstermin erstellen"""
     slot = ExamSlot(
         class_id=data.class_id,
-        strapi_course_id=data.strapi_course_id,
+        course_id=data.course_id,
         examiner_id=current_user.id,
         scheduled_at=data.scheduled_at,
         duration_minutes=data.duration_minutes,
@@ -642,7 +655,7 @@ async def issue_certificate(
     
     certificate = Certificate(
         user_id=data.user_id,
-        strapi_course_id=data.strapi_course_id,
+        course_id=data.course_id,
         exam_booking_id=data.exam_booking_id,
         certificate_number=certificate_number,
     )

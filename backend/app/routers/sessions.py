@@ -12,9 +12,15 @@ from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
 from app.db.session import get_db
-from app.models.user import User, UserRole
-from app.models.session import LiveSession, AttendanceConfirmation, Attendance, AttendanceStatus
-from app.models.class_model import ClassEnrollment
+from app.models import (
+    User,
+    UserRole,
+    LiveSession,
+    AttendanceConfirmation,
+    Attendance,
+    AttendanceStatus,
+    ClassEnrollment,
+)
 from app.routers.auth import get_current_user, require_role
 
 router = APIRouter()

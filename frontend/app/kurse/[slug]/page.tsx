@@ -20,14 +20,17 @@ import {
   getCourses,
   getCategoryLabel, 
   getLevelLabel,
-  getStrapiMediaUrl 
-} from '@/lib/strapi';
+  getMediaUrl 
+} from '@/lib/content';
+
+// Vimeo Player für Vorschau-Video
+import VimeoPlayer from '@/components/VimeoPlayer';
 
 // Statische Pfade generieren (für SSG)
 export async function generateStaticParams() {
   const courses = await getCourses();
   return courses.map((course) => ({
-    slug: course.attributes.slug,
+    slug: course.slug,
   }));
 }
 
@@ -42,8 +45,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
   
   return {
-    title: `${course.attributes.title} | WARIZMY Education`,
-    description: course.attributes.short_description || course.attributes.description,
+    title: `${course.title} | WARIZMY Education`,
+    description: course.short_description || course.description,
   };
 }
 
@@ -94,7 +97,7 @@ export default async function KursDetailPage({
 }: { 
   params: { slug: string } 
 }) {
-  // Kurs von Strapi laden
+  // Kurs von API laden
   const course = await getCourseBySlug(params.slug);
   
   // 404 wenn Kurs nicht gefunden
@@ -102,9 +105,9 @@ export default async function KursDetailPage({
     notFound();
   }
 
-  const { attributes } = course;
-  const lessons = attributes.lessons?.data || [];
-  const teacher = attributes.teacher?.data;
+  const lessons = course.lessons || [];
+  const teachers = course.teachers || [];
+  const teacher = teachers[0] || null;
 
   return (
     <>
@@ -114,10 +117,10 @@ export default async function KursDetailPage({
         <section className="relative bg-gray-900 text-white">
           {/* Hintergrundbild */}
           <div className="absolute inset-0">
-            {attributes.thumbnail?.data ? (
+            {course.thumbnail_url ? (
               <img 
-                src={getStrapiMediaUrl(attributes.thumbnail.data)}
-                alt={attributes.title}
+                src={getMediaUrl(course.thumbnail_url)}
+                alt={course.title}
                 className="w-full h-full object-cover opacity-30"
               />
             ) : (
@@ -141,31 +144,31 @@ export default async function KursDetailPage({
               {/* Badges */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="badge-primary">
-                  {getCategoryLabel(attributes.category)}
+                  {getCategoryLabel(course.category)}
                 </span>
                 <span className="bg-white/20 text-white text-xs font-medium px-3 py-1 rounded-full">
-                  {getLevelLabel(attributes.level)}
+                  {getLevelLabel(course.level)}
                 </span>
               </div>
 
               {/* Titel */}
               <h1 className="text-3xl md:text-5xl font-bold mb-4">
-                {attributes.title}
+                {course.title}
               </h1>
 
               {/* Kurzbeschreibung */}
-              {attributes.short_description && (
+              {course.short_description && (
                 <p className="text-lg text-white/90 mb-6">
-                  {attributes.short_description}
+                  {course.short_description}
                 </p>
               )}
 
               {/* Meta-Infos */}
               <div className="flex flex-wrap gap-6 text-white/80">
-                {attributes.duration_weeks && (
+                {course.duration_weeks && (
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5" />
-                    <span>{attributes.duration_weeks} Wochen</span>
+                    <span>{course.duration_weeks} Wochen</span>
                   </div>
                 )}
                 {lessons.length > 0 && (
@@ -174,10 +177,10 @@ export default async function KursDetailPage({
                     <span>{lessons.length} Lektionen</span>
                   </div>
                 )}
-                {attributes.max_students && (
+                {course.max_students && (
                   <div className="flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    <span>Max. {attributes.max_students} Teilnehmer</span>
+                    <span>Max. {course.max_students} Teilnehmer</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -195,13 +198,26 @@ export default async function KursDetailPage({
             <div className="grid lg:grid-cols-3 gap-12">
               {/* Linke Spalte - Beschreibung */}
               <div className="lg:col-span-2">
+                {/* Vorschau-Video (falls vorhanden) */}
+                {course.preview_video_url && (
+                  <div className="mb-12">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                      Kursvorschau
+                    </h2>
+                    <VimeoPlayer 
+                      videoUrl={course.preview_video_url}
+                      title={`Vorschau: ${course.title}`}
+                    />
+                  </div>
+                )}
+
                 {/* Beschreibung */}
                 <div className="prose prose-lg max-w-none mb-12">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">
                     Über diesen Kurs
                   </h2>
                   <div className="text-gray-600 whitespace-pre-line">
-                    {attributes.description}
+                    {course.description}
                   </div>
                 </div>
 
@@ -213,31 +229,33 @@ export default async function KursDetailPage({
                     </h2>
                     <div className="space-y-3">
                       {lessons.map((lesson, index) => (
-                        <div 
+                        <Link
                           key={lesson.id}
-                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
+                          href={`/kurse/${course.slug}/lektion/${lesson.slug}`}
+                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:border-primary-200 border border-transparent transition-colors group"
                         >
-                          <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                            <span className="text-primary-600 font-bold">
+                          <div className="w-10 h-10 rounded-full bg-primary-100 group-hover:bg-primary-500 flex items-center justify-center flex-shrink-0 transition-colors">
+                            <span className="text-primary-600 group-hover:text-white font-bold">
                               {index + 1}
                             </span>
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-medium text-gray-900">
-                              {lesson.attributes.title}
+                            <h3 className="font-medium text-gray-900 group-hover:text-primary-700">
+                              {lesson.title}
                             </h3>
-                            {lesson.attributes.duration_minutes && (
+                            {lesson.duration_minutes && (
                               <span className="text-sm text-gray-500">
-                                {lesson.attributes.duration_minutes} Min.
+                                {lesson.duration_minutes} Min.
                               </span>
                             )}
                           </div>
-                          {lesson.attributes.is_free && (
+                          {lesson.is_free_preview && (
                             <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                              Kostenlos
+                              Vorschau
                             </span>
                           )}
-                        </div>
+                          <Play className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                        </Link>
                       ))}
                     </div>
                   </div>
@@ -252,10 +270,10 @@ export default async function KursDetailPage({
                     <div className="flex items-start gap-6 p-6 bg-gray-50 rounded-xl">
                       {/* Foto */}
                       <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {teacher.attributes.photo?.data ? (
+                        {teacher.photo_url ? (
                           <img 
-                            src={getStrapiMediaUrl(teacher.attributes.photo.data)}
-                            alt={teacher.attributes.name}
+                            src={getMediaUrl(teacher.photo_url)}
+                            alt={teacher.name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -266,16 +284,16 @@ export default async function KursDetailPage({
                       {/* Info */}
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">
-                          {teacher.attributes.name}
+                          {teacher.name}
                         </h3>
-                        {teacher.attributes.short_bio && (
-                          <p className="text-gray-600 mt-2">
-                            {teacher.attributes.short_bio}
+                        {teacher.bio && (
+                          <p className="text-gray-600 mt-2 line-clamp-3">
+                            {teacher.bio}
                           </p>
                         )}
-                        {teacher.attributes.qualifications && (
+                        {teacher.qualifications && (
                           <p className="text-sm text-gray-500 mt-2">
-                            {teacher.attributes.qualifications}
+                            {teacher.qualifications}
                           </p>
                         )}
                       </div>
@@ -289,10 +307,10 @@ export default async function KursDetailPage({
                 <div className="sticky top-24 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                   {/* Preis */}
                   <div className="p-6 border-b border-gray-100">
-                    {attributes.price > 0 ? (
+                    {course.price > 0 ? (
                       <div className="text-center">
                         <span className="text-4xl font-bold text-gray-900">
-                          €{attributes.price}
+                          €{course.price}
                         </span>
                         <span className="text-gray-500 ml-2">
                           pro Kurs
@@ -351,4 +369,3 @@ export default async function KursDetailPage({
     </>
   );
 }
-

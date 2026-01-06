@@ -12,8 +12,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from app.db.session import get_db
-from app.models.user import User
-from app.models.certificate import Certificate
+from app.models import User, Certificate
 from app.routers.auth import get_current_user
 
 router = APIRouter()
@@ -25,7 +24,7 @@ router = APIRouter()
 class CertificateResponse(BaseModel):
     """Schema für Zertifikat"""
     id: str
-    strapi_course_id: int
+    course_id: int
     certificate_number: str
     issued_at: datetime
     has_pdf: bool
@@ -65,7 +64,7 @@ async def get_my_certificates(
     return [
         CertificateResponse(
             id=str(c.id),
-            strapi_course_id=c.strapi_course_id,
+            course_id=c.course_id,
             certificate_number=c.certificate_number,
             issued_at=c.issued_at,
             has_pdf=c.pdf_path is not None,
@@ -148,7 +147,7 @@ async def verify_certificate(
         valid=True,
         certificate_number=certificate.certificate_number,
         holder_name=certificate.user.full_name,
-        course_id=certificate.strapi_course_id,
+        course_id=certificate.course_id,
         issued_at=certificate.issued_at,
     )
 

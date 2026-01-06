@@ -12,11 +12,14 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
 from app.db.session import get_db
-from app.models.user import User
-from app.models.class_model import ClassEnrollment
-from app.models.enrollment import Enrollment, LessonProgress
-from app.models.certificate import Certificate
-from app.models.payment import Invoice
+from app.models import (
+    User,
+    ClassEnrollment,
+    Enrollment,
+    LessonProgress,
+    Certificate,
+    Invoice,
+)
 from app.routers.auth import get_current_user
 
 router = APIRouter()
@@ -60,7 +63,7 @@ class ClassEnrollmentResponse(BaseModel):
     id: str
     class_id: str
     class_name: str
-    strapi_course_id: int
+    course_id: int
     enrollment_type: str
     status: str
     started_at: datetime
@@ -73,7 +76,7 @@ class ClassEnrollmentResponse(BaseModel):
 class EnrollmentResponse(BaseModel):
     """Schema für Seminar-Einschreibung"""
     id: str
-    strapi_course_id: int
+    course_id: int
     enrollment_type: str
     status: str
     started_at: datetime
@@ -85,8 +88,8 @@ class EnrollmentResponse(BaseModel):
 
 class LessonProgressResponse(BaseModel):
     """Schema für Lektions-Fortschritt"""
-    strapi_lesson_id: int
-    strapi_course_id: int
+    lesson_id: int
+    course_id: int
     watched_seconds: int
     completed: bool
     completed_at: Optional[datetime]
@@ -100,7 +103,7 @@ class LessonProgressResponse(BaseModel):
 class CertificateResponse(BaseModel):
     """Schema für Zertifikat"""
     id: str
-    strapi_course_id: int
+    course_id: int
     certificate_number: str
     issued_at: datetime
     pdf_path: Optional[str]
@@ -201,7 +204,7 @@ async def get_my_classes(
             id=str(e.id),
             class_id=str(e.class_id),
             class_name=e.class_.name,
-            strapi_course_id=e.class_.strapi_course_id,
+            course_id=e.class_.course_id,
             enrollment_type=e.enrollment_type,
             status=e.status.value,
             started_at=e.started_at,
@@ -228,7 +231,7 @@ async def get_my_enrollments(
     return [
         EnrollmentResponse(
             id=str(e.id),
-            strapi_course_id=e.strapi_course_id,
+            course_id=e.course_id,
             enrollment_type=e.enrollment_type.value,
             status=e.status.value,
             started_at=e.started_at,
@@ -252,15 +255,15 @@ async def get_my_progress(
     query = select(LessonProgress).where(LessonProgress.user_id == current_user.id)
     
     if course_id:
-        query = query.where(LessonProgress.strapi_course_id == course_id)
+        query = query.where(LessonProgress.course_id == course_id)
     
     result = await db.execute(query)
     progress = result.scalars().all()
     
     return [
         LessonProgressResponse(
-            strapi_lesson_id=p.strapi_lesson_id,
-            strapi_course_id=p.strapi_course_id,
+            lesson_id=p.lesson_id,
+            course_id=p.course_id,
             watched_seconds=p.watched_seconds,
             completed=p.completed,
             completed_at=p.completed_at,
@@ -289,7 +292,7 @@ async def get_my_certificates(
     return [
         CertificateResponse(
             id=str(c.id),
-            strapi_course_id=c.strapi_course_id,
+            course_id=c.course_id,
             certificate_number=c.certificate_number,
             issued_at=c.issued_at,
             pdf_path=c.pdf_path,

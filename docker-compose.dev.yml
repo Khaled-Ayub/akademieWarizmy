@@ -3,46 +3,35 @@
 # ===========================================
 # Starten: docker-compose -f docker-compose.dev.yml up -d
 # Mit Hot-Reload für Frontend und Backend
+#
+# VEREINFACHT: Eine PostgreSQL-Datenbank für alle Daten
 
 services:
   # -------------------------------------------
-  # PostgreSQL für FastAPI (Anwendungsdaten)
+  # PostgreSQL (Einzige Datenbank)
   # -------------------------------------------
-  postgres-app:
+  postgres:
     image: postgres:16-alpine
-    container_name: warizmy-dev-postgres-app
+    container_name: warizmy-dev-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: warizmy
       POSTGRES_PASSWORD: warizmy_dev_password
-      POSTGRES_DB: warizmy_app
+      POSTGRES_DB: warizmy_education
     ports:
       - "5432:5432"
     volumes:
-      - postgres_app_dev:/var/lib/postgresql/data
+      - postgres_dev:/var/lib/postgresql/data
     networks:
       - warizmy-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warizmy -d warizmy_education"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # -------------------------------------------
-  # PostgreSQL für Strapi (CMS-Daten)
-  # -------------------------------------------
-  postgres-strapi:
-    image: postgres:16-alpine
-    container_name: warizmy-dev-postgres-strapi
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: warizmy
-      POSTGRES_PASSWORD: warizmy_dev_password
-      POSTGRES_DB: warizmy_strapi
-    ports:
-      - "5434:5432"
-    volumes:
-      - postgres_strapi_dev:/var/lib/postgresql/data
-    networks:
-      - warizmy-dev-network
-
-  # -------------------------------------------
-  # Redis
+  # Redis (Cache & Sessions)
   # -------------------------------------------
   redis:
     image: redis:7-alpine
@@ -54,7 +43,7 @@ services:
       - warizmy-dev-network
 
   # -------------------------------------------
-  # MinIO
+  # MinIO (Datei-Speicherung)
   # -------------------------------------------
   minio:
     image: minio/minio:latest
@@ -81,54 +70,26 @@ services:
       dockerfile: Dockerfile.dev
     container_name: warizmy-dev-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://warizmy:warizmy_dev_password@postgres-app:5432/warizmy_app
+      DATABASE_URL: postgresql://warizmy:warizmy_dev_password@postgres:5432/warizmy_education
       REDIS_URL: redis://redis:6379/0
-      STRAPI_URL: http://strapi:1337
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin123
       JWT_SECRET: dev_jwt_secret_change_in_production
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DEBUG: "true"
     ports:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app:ro
     depends_on:
-      - postgres-app
-      - redis
-    networks:
-      - warizmy-dev-network
-
-  # -------------------------------------------
-  # Strapi CMS (Entwicklung)
-  # -------------------------------------------
-  strapi:
-    build:
-      context: ./strapi
-      dockerfile: Dockerfile.dev
-    container_name: warizmy-dev-strapi
-    restart: unless-stopped
-    environment:
-      DATABASE_CLIENT: postgres
-      DATABASE_HOST: postgres-strapi
-      DATABASE_PORT: 5432
-      DATABASE_NAME: warizmy_strapi
-      DATABASE_USERNAME: warizmy
-      DATABASE_PASSWORD: warizmy_dev_password
-      JWT_SECRET: strapi_dev_jwt_secret
-      ADMIN_JWT_SECRET: strapi_dev_admin_jwt_secret
-      APP_KEYS: key1,key2,key3,key4
-      API_TOKEN_SALT: strapi_dev_api_token_salt
-      # OpenAI API Key für AI-Assistent
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-    ports:
-      - "1337:1337"
-    volumes:
-      - ./strapi/src:/opt/app/src:ro
-      - strapi_uploads_dev:/opt/app/public/uploads
-    depends_on:
-      - postgres-strapi
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - warizmy-dev-network
 
@@ -142,8 +103,12 @@ services:
     container_name: warizmy-dev-frontend
     restart: unless-stopped
     environment:
+      # API URL (Backend)
       NEXT_PUBLIC_API_URL: http://localhost:8000/api
-      NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
+      # Interne URL für Server-seitige API-Calls (Docker-Netzwerk)
+      API_INTERNAL_URL: http://backend:8000/api
+      # OpenAI API Key für KI-Generierung (optional)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "3002:3000"
     volumes:
@@ -155,7 +120,6 @@ services:
       - ./frontend/types:/app/types:ro
     depends_on:
       - backend
-      - strapi
     networks:
       - warizmy-dev-network
 
@@ -163,14 +127,10 @@ services:
 # Volumes (Entwicklung)
 # -------------------------------------------
 volumes:
-  postgres_app_dev:
-    name: warizmy_dev_postgres_app
-  postgres_strapi_dev:
-    name: warizmy_dev_postgres_strapi
+  postgres_dev:
+    name: warizmy_dev_postgres
   minio_dev:
     name: warizmy_dev_minio
-  strapi_uploads_dev:
-    name: warizmy_dev_strapi_uploads
 
 # -------------------------------------------
 # Netzwerk (Entwicklung)
@@ -179,4 +139,3 @@ networks:
   warizmy-dev-network:
     name: warizmy-dev-network
     driver: bridge
-

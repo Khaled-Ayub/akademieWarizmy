@@ -13,9 +13,15 @@ import stripe
 
 from app.db.session import get_db
 from app.core.config import get_settings
-from app.models.user import User
-from app.models.payment import Payment, PaymentMethod, PaymentStatus
-from app.models.enrollment import Enrollment, EnrollmentType, EnrollmentStatus
+from app.models import (
+    User,
+    Payment,
+    PaymentMethod,
+    PaymentStatus,
+    Enrollment,
+    EnrollmentType,
+    EnrollmentStatus,
+)
 from app.routers.auth import get_current_user
 
 settings = get_settings()
@@ -184,7 +190,7 @@ async def stripe_webhook(
         # Einschreibung erstellen
         enrollment = Enrollment(
             user_id=user_id,
-            strapi_course_id=course_id,
+            course_id=course_id,
             enrollment_type=EnrollmentType(enrollment_type),
             status=EnrollmentStatus.ACTIVE,
         )

@@ -11,8 +11,13 @@ from sqlalchemy import select
 from pydantic import BaseModel
 
 from app.db.session import get_db
-from app.models.user import User
-from app.models.enrollment import Enrollment, LessonProgress, EnrollmentType, EnrollmentStatus
+from app.models import (
+    User,
+    Enrollment,
+    LessonProgress,
+    EnrollmentType,
+    EnrollmentStatus,
+)
 from app.routers.auth import get_current_user
 
 router = APIRouter()
@@ -67,7 +72,7 @@ async def get_enrollment(
     
     return {
         "id": str(enrollment.id),
-        "strapi_course_id": enrollment.strapi_course_id,
+        "course_id": enrollment.course_id,
         "enrollment_type": enrollment.enrollment_type.value,
         "status": enrollment.status.value,
         "started_at": enrollment.started_at.isoformat(),
@@ -128,15 +133,15 @@ async def update_lesson_progress(
     result = await db.execute(
         select(LessonProgress)
         .where(LessonProgress.user_id == current_user.id)
-        .where(LessonProgress.strapi_lesson_id == lesson_id)
+        .where(LessonProgress.lesson_id == lesson_id)
     )
     progress = result.scalar_one_or_none()
     
     if not progress:
         progress = LessonProgress(
             user_id=current_user.id,
-            strapi_lesson_id=lesson_id,
-            strapi_course_id=course_id,
+            lesson_id=lesson_id,
+            course_id=course_id,
         )
         db.add(progress)
     
@@ -153,8 +158,8 @@ async def update_lesson_progress(
     await db.refresh(progress)
     
     return {
-        "strapi_lesson_id": progress.strapi_lesson_id,
-        "strapi_course_id": progress.strapi_course_id,
+        "lesson_id": progress.lesson_id,
+        "course_id": progress.course_id,
         "watched_seconds": progress.watched_seconds,
         "completed": progress.completed,
         "completed_at": progress.completed_at.isoformat() if progress.completed_at else None,
@@ -172,10 +177,10 @@ async def submit_quiz(
     """
     Quiz-Antworten einreichen und bewerten.
     
-    TODO: Quiz-Daten aus Strapi laden und auswerten.
+    TODO: Quiz-Daten aus der Datenbank laden und auswerten.
     """
-    # TODO: Quiz aus Strapi laden
-    # quiz = await strapi_client.get_quiz(lesson_id)
+    # TODO: Quiz aus Datenbank laden
+    # quiz = await db.get_quiz(lesson_id)
     
     # Dummy-Bewertung für jetzt
     correct_answers = 7
@@ -187,15 +192,15 @@ async def submit_quiz(
     result = await db.execute(
         select(LessonProgress)
         .where(LessonProgress.user_id == current_user.id)
-        .where(LessonProgress.strapi_lesson_id == lesson_id)
+        .where(LessonProgress.lesson_id == lesson_id)
     )
     progress = result.scalar_one_or_none()
     
     if not progress:
         progress = LessonProgress(
             user_id=current_user.id,
-            strapi_lesson_id=lesson_id,
-            strapi_course_id=course_id,
+            lesson_id=lesson_id,
+            course_id=course_id,
         )
         db.add(progress)
     
@@ -224,7 +229,7 @@ async def get_course_progress(
     result = await db.execute(
         select(LessonProgress)
         .where(LessonProgress.user_id == current_user.id)
-        .where(LessonProgress.strapi_course_id == course_id)
+        .where(LessonProgress.course_id == course_id)
     )
     progress_list = result.scalars().all()
     
@@ -241,7 +246,7 @@ async def get_course_progress(
         "completion_percentage": int((completed_lessons / total_lessons * 100)) if total_lessons > 0 else 0,
         "lessons": [
             {
-                "lesson_id": p.strapi_lesson_id,
+                "lesson_id": p.lesson_id,
                 "watched_seconds": p.watched_seconds,
                 "completed": p.completed,
                 "quiz_score": p.quiz_score,

@@ -43,12 +43,6 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # =========================================
-    # Strapi CMS
-    # =========================================
-    STRAPI_URL: str = "http://localhost:1337"
-    STRAPI_API_TOKEN: Optional[str] = None
-    
-    # =========================================
     # MinIO / S3
     # =========================================
     MINIO_ENDPOINT: str = "localhost:9000"

@@ -15,8 +15,8 @@ from app.core.config import get_settings
 # DB: Datenbankverbindung
 from app.db.session import init_db, close_db
 
-# API: Router importieren
-from app.routers import auth, users, classes, enrollments, sessions, payments, exams, certificates, admin
+# API: Router importieren (neu strukturiert)
+from app.api.v1 import api_router
 
 # Settings laden
 settings = get_settings()
@@ -86,73 +86,10 @@ app.add_middleware(
 
 
 # =========================================
-# API Router einbinden
+# API Router einbinden (vereinfacht!)
 # =========================================
-# Präfix /api für alle Routen
-api_prefix = "/api"
-
-# Authentifizierung
-app.include_router(
-    auth.router, 
-    prefix=f"{api_prefix}/auth", 
-    tags=["Authentifizierung"]
-)
-
-# Benutzer
-app.include_router(
-    users.router, 
-    prefix=f"{api_prefix}/users", 
-    tags=["Benutzer"]
-)
-
-# Klassen
-app.include_router(
-    classes.router, 
-    prefix=f"{api_prefix}/classes", 
-    tags=["Klassen"]
-)
-
-# Einschreibungen & Fortschritt
-app.include_router(
-    enrollments.router, 
-    prefix=f"{api_prefix}/enrollments", 
-    tags=["Einschreibungen"]
-)
-
-# Live-Sessions & Anwesenheit
-app.include_router(
-    sessions.router, 
-    prefix=f"{api_prefix}/sessions", 
-    tags=["Sessions"]
-)
-
-# Zahlungen
-app.include_router(
-    payments.router, 
-    prefix=f"{api_prefix}/payments", 
-    tags=["Zahlungen"]
-)
-
-# Prüfungen
-app.include_router(
-    exams.router, 
-    prefix=f"{api_prefix}/exams", 
-    tags=["Prüfungen"]
-)
-
-# Zertifikate
-app.include_router(
-    certificates.router, 
-    prefix=f"{api_prefix}/certificates", 
-    tags=["Zertifikate"]
-)
-
-# Admin-Bereich
-app.include_router(
-    admin.router, 
-    prefix=f"{api_prefix}/admin", 
-    tags=["Admin"]
-)
+# Alle API-Endpunkte unter /api
+app.include_router(api_router, prefix="/api")
 
 
 # =========================================
@@ -187,4 +124,10 @@ async def api_info():
         "version": settings.APP_VERSION,
         "docs": "/api/docs" if settings.DEBUG else "Deaktiviert in Produktion",
         "health": "/api/health",
+        "endpoints": {
+            "courses": "/api/courses",
+            "content": "/api/content",
+            "auth": "/api/auth",
+            "users": "/api/users",
+        }
     }

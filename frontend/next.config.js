@@ -40,15 +40,9 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
   
-  // Weiterleitungen
+  // Weiterleitungen (leer - /admin ist jetzt eigenes Dashboard)
   async redirects() {
-    return [
-      {
-        source: '/admin',
-        destination: '/cms',
-        permanent: false,
-      },
-    ];
+    return [];
   },
   
   // Header für Sicherheit

@@ -1,0 +1,51 @@
+# ===========================================
+# WARIZMY EDUCATION - Docker Ignore (Root)
+# ===========================================
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files (nur .env.example behalten)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker files (nicht in den Kontext kopieren)
+docker-compose*.yml
+Dockerfile*
+
+# Scripts (nicht für Container nötig)
+scripts/
+
+# Nginx (separate)
+nginx/
+
+

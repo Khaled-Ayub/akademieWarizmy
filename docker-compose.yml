@@ -7,43 +7,22 @@
 
 services:
   # -------------------------------------------
-  # PostgreSQL für FastAPI (Anwendungsdaten)
+  # PostgreSQL (Einzige Datenbank)
   # -------------------------------------------
-  postgres-app:
+  postgres:
     image: postgres:16-alpine
-    container_name: warizmy-postgres-app
+    container_name: warizmy-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: warizmy_app
+      POSTGRES_DB: warizmy_education
     volumes:
-      - postgres_app_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - warizmy-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d warizmy_app"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # -------------------------------------------
-  # PostgreSQL für Strapi (CMS-Daten)
-  # -------------------------------------------
-  postgres-strapi:
-    image: postgres:16-alpine
-    container_name: warizmy-postgres-strapi
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: warizmy_strapi
-    volumes:
-      - postgres_strapi_data:/var/lib/postgresql/data
-    networks:
-      - warizmy-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d warizmy_strapi"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d warizmy_education"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -100,9 +79,8 @@ services:
     container_name: warizmy-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres-app:5432/warizmy_app
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/warizmy_education
       REDIS_URL: redis://redis:6379/0
-      STRAPI_URL: http://strapi:1337
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
@@ -121,7 +99,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
     depends_on:
-      postgres-app:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -139,7 +117,7 @@ services:
     restart: unless-stopped
     command: celery -A app.celery_app worker --loglevel=info
     environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres-app:5432/warizmy_app
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/warizmy_education
       REDIS_URL: redis://redis:6379/0
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -154,34 +132,6 @@ services:
       - warizmy-network
 
   # -------------------------------------------
-  # Strapi CMS
-  # -------------------------------------------
-  strapi:
-    build:
-      context: ./strapi
-      dockerfile: Dockerfile
-    container_name: warizmy-strapi
-    restart: unless-stopped
-    environment:
-      DATABASE_CLIENT: postgres
-      DATABASE_HOST: postgres-strapi
-      DATABASE_PORT: 5432
-      DATABASE_NAME: warizmy_strapi
-      DATABASE_USERNAME: ${DB_USER}
-      DATABASE_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${STRAPI_JWT_SECRET}
-      ADMIN_JWT_SECRET: ${STRAPI_ADMIN_JWT_SECRET}
-      APP_KEYS: ${STRAPI_APP_KEYS}
-      API_TOKEN_SALT: ${STRAPI_API_TOKEN_SALT}
-    volumes:
-      - strapi_uploads:/opt/app/public/uploads
-    depends_on:
-      postgres-strapi:
-        condition: service_healthy
-    networks:
-      - warizmy-network
-
-  # -------------------------------------------
   # Next.js Frontend
   # -------------------------------------------
   frontend:
@@ -192,11 +142,9 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: ${API_URL}
-      NEXT_PUBLIC_STRAPI_URL: ${STRAPI_PUBLIC_URL}
       NEXT_PUBLIC_STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
     depends_on:
       - backend
-      - strapi
     networks:
       - warizmy-network
 
@@ -218,7 +166,6 @@ services:
     depends_on:
       - frontend
       - backend
-      - strapi
     networks:
       - warizmy-network
 
@@ -237,16 +184,12 @@ services:
 # Volumes (Persistenter Speicher)
 # -------------------------------------------
 volumes:
-  postgres_app_data:
-    name: warizmy_postgres_app
-  postgres_strapi_data:
-    name: warizmy_postgres_strapi
+  postgres_data:
+    name: warizmy_postgres
   redis_data:
     name: warizmy_redis
   minio_data:
     name: warizmy_minio
-  strapi_uploads:
-    name: warizmy_strapi_uploads
   certbot_webroot:
     name: warizmy_certbot_webroot
   certbot_certs:
@@ -259,4 +202,3 @@ networks:
   warizmy-network:
     name: warizmy-network
     driver: bridge
-

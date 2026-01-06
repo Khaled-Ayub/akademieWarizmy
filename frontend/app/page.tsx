@@ -1,9 +1,10 @@
 // ===========================================
 // WARIZMY EDUCATION - Startseite
 // ===========================================
-// Öffentliche Landingpage mit Strapi-Integration
+// Öffentliche Landingpage mit FastAPI-Integration
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   BookOpen, 
   Users, 
@@ -14,29 +15,39 @@ import {
   ChevronRight,
   CheckCircle,
   Globe,
-  Video
+  Video,
+  Moon
 } from 'lucide-react';
 
-// Strapi API importieren
+// API importieren
 import { 
   getCourses, 
   Course, 
   getCategoryLabel, 
   getLevelLabel,
-  getStrapiMediaUrl 
-} from '@/lib/strapi';
+  getMediaUrl 
+} from '@/lib/content';
 
 // Hijri Datum + Tages-Empfehlung (Islam)
 import { getIslamicDailyInfo } from '@/lib/islamicDate';
-import { getDailyGuidances } from '@/lib/strapi';
+import { getDailyGuidances } from '@/lib/content';
 
 // Ankündigungs-Banner importieren
 import AnnouncementBanner from '@/components/AnnouncementBanner';
 
+// Kalender-Komponente für Unterrichtstermine
+import ScheduleCalendar from '@/components/ScheduleCalendar';
+
+// Newsletter-Komponente
+import Newsletter from '@/components/Newsletter';
+
+// Kurs-Suche Komponente
+import CourseSearch from '@/components/CourseSearch';
+
 // Hero-Sektion
 async function HeroSection() {
   const islamicToday = getIslamicDailyInfo();
-  const strapiGuidances =
+  const dailyGuidances =
     islamicToday
       ? await getDailyGuidances({
           weekday: islamicToday.weekdayKey,
@@ -45,9 +56,9 @@ async function HeroSection() {
         })
       : [];
 
-  const guidanceFromStrapi =
-    strapiGuidances.length > 0
-      ? strapiGuidances.map((g) => g.attributes.text).join(' ')
+  const guidanceFromAPI =
+    dailyGuidances.length > 0
+      ? dailyGuidances.map((g) => g.text).join(' ')
       : null;
 
   return (
@@ -58,28 +69,13 @@ async function HeroSection() {
       {/* Content */}
       <div className="container-custom relative z-10">
         <div className="max-w-3xl">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-medium mb-6 animate-fade-in">
-            <Star className="w-4 h-4 fill-current" />
-            <span>Neue Kurse verfügbar</span>
-          </div>
-
-          {/* Hijri Datum + Wochentag + Empfehlung */}
+          {/* Hijri Datum — kompakt & modern */}
           {islamicToday && (
-            <div className="mb-6 inline-flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 backdrop-blur-sm animate-fade-in">
-              <div className="text-sm text-gray-700">
-                <span className="font-semibold">
-                  {islamicToday.weekday}
-                </span>
-                <span className="mx-2 text-gray-300">•</span>
-                <span>
-                  {islamicToday.hijriFormatted}
-                </span>
-              </div>
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-gray-700">Empfehlung für heute:</span>{' '}
-                {guidanceFromStrapi || islamicToday.guidance}
-              </div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 px-3 py-1.5 text-xs backdrop-blur-sm animate-fade-in cursor-default" title={guidanceFromAPI || islamicToday.guidance}>
+              <Moon className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-emerald-800 font-medium">{islamicToday.weekday}</span>
+              <span className="text-emerald-300">•</span>
+              <span className="text-emerald-700">{islamicToday.hijriFormatted}</span>
             </div>
           )}
           
@@ -104,6 +100,14 @@ async function HeroSection() {
             <Link href="/registrieren" className="btn-outline text-lg">
               Kostenlos starten
             </Link>
+          </div>
+          
+          {/* Kurs-Suche */}
+          <div className="mt-8 animate-slide-up animation-delay-250">
+            <CourseSearch 
+              placeholder="Suchen Sie nach Kursen..." 
+              className="max-w-xl"
+            />
           </div>
           
           {/* Stats */}
@@ -208,9 +212,9 @@ function FeaturesSection() {
   );
 }
 
-// Kurse-Preview (Daten werden von Strapi geladen)
+// Kurse-Preview (Daten werden von FastAPI geladen)
 async function CoursesPreview() {
-  // Kurse von Strapi abrufen
+  // Kurse von API abrufen
   const courses = await getCourses();
   
   // Fallback wenn keine Kurse vorhanden
@@ -226,14 +230,13 @@ async function CoursesPreview() {
             <div className="bg-white rounded-xl p-8 shadow-sm max-w-md mx-auto">
               <BookOpen className="w-12 h-12 text-primary-500 mx-auto mb-4" />
               <p className="text-gray-600">
-                Fügen Sie Kurse in Strapi hinzu, um sie hier anzuzeigen.
+                Fügen Sie Kurse im Admin-Bereich hinzu, um sie hier anzuzeigen.
               </p>
               <Link 
-                href="http://localhost:1337/admin" 
-                target="_blank"
+                href="/admin/kurse" 
                 className="btn-primary mt-4 inline-block"
               >
-                Strapi Admin öffnen
+                Kurse verwalten
               </Link>
             </div>
           </div>
@@ -262,16 +265,16 @@ async function CoursesPreview() {
           </Link>
         </div>
         
-        {/* Course Cards - Dynamisch von Strapi */}
+        {/* Course Cards - Dynamisch von API */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {courses.slice(0, 6).map((course) => (
             <div key={course.id} className="card-hover">
               {/* Thumbnail */}
               <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-600 relative overflow-hidden">
-                {course.attributes.thumbnail?.data ? (
+                {course.thumbnail_url ? (
                   <img 
-                    src={getStrapiMediaUrl(course.attributes.thumbnail.data)}
-                    alt={course.attributes.title}
+                    src={getMediaUrl(course.thumbnail_url)}
+                    alt={course.title}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -279,7 +282,7 @@ async function CoursesPreview() {
                 )}
                 <div className="absolute bottom-4 left-4">
                   <span className="badge-primary">
-                    {getCategoryLabel(course.attributes.category)}
+                    {getCategoryLabel(course.category)}
                   </span>
                 </div>
               </div>
@@ -288,33 +291,33 @@ async function CoursesPreview() {
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="badge-secondary">
-                    {getLevelLabel(course.attributes.level)}
+                    {getLevelLabel(course.level)}
                   </span>
-                  {course.attributes.price > 0 && (
+                  {course.price > 0 && (
                     <span className="text-sm font-semibold text-primary-600">
-                      €{course.attributes.price}
+                      €{course.price}
                     </span>
                   )}
                 </div>
                 
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {course.attributes.title}
+                  {course.title}
                 </h3>
                 
-                {course.attributes.short_description && (
+                {course.short_description && (
                   <p className="text-gray-600 text-sm line-clamp-2">
-                    {course.attributes.short_description}
+                    {course.short_description}
                   </p>
                 )}
                 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                  {course.attributes.duration_weeks && (
+                  {course.duration_weeks && (
                     <span className="text-sm text-gray-500">
-                      {course.attributes.duration_weeks} Wochen
+                      {course.duration_weeks} Wochen
                     </span>
                   )}
                   <Link 
-                    href={`/kurse/${course.attributes.slug}`}
+                    href={`/kurse/${course.slug}`}
                     className="text-primary-500 font-medium hover:text-primary-600 text-sm"
                   >
                     Details →
@@ -383,9 +386,15 @@ function Header() {
       <div className="container-custom">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-white" />
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm">
+              <Image
+                src="/images/Logo/full (1).jpg"
+                alt="WARIZMY Logo"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
             <span className="font-heading text-xl font-bold text-gray-900">
               WARIZMY
@@ -393,17 +402,20 @@ function Header() {
           </Link>
           
           {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/kurse" className="text-gray-600 hover:text-primary-500 font-medium">
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/kurse" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
               Kurse
             </Link>
-            <Link href="/ueber-uns" className="text-gray-600 hover:text-primary-500 font-medium">
+            <Link href="/lehrer" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
+              Lehrer
+            </Link>
+            <Link href="/ueber-uns" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
               Über uns
             </Link>
-            <Link href="/faq" className="text-gray-600 hover:text-primary-500 font-medium">
+            <Link href="/faq" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
               FAQ
             </Link>
-            <Link href="/kontakt" className="text-gray-600 hover:text-primary-500 font-medium">
+            <Link href="/kontakt" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
               Kontakt
             </Link>
           </nav>
@@ -430,40 +442,51 @@ function Footer() {
       <div className="container-custom">
         <div className="grid md:grid-cols-4 gap-12">
           {/* Logo & Info */}
-          <div className="md:col-span-2">
+          <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-white" />
+              <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm">
+                <Image
+                  src="/images/Logo/full (1).jpg"
+                  alt="WARIZMY Logo"
+                  fill
+                  className="object-cover"
+                />
               </div>
               <span className="font-heading text-xl font-bold text-white">
                 WARIZMY
               </span>
             </div>
-            <p className="text-gray-400 max-w-md">
+            <p className="text-gray-400 text-sm">
               Ihre Plattform für Arabisch und islamische Bildung. 
-              Lernen Sie mit erfahrenen Lehrern – online oder vor Ort.
+              Lernen Sie mit erfahrenen Lehrern.
             </p>
           </div>
           
           {/* Links */}
           <div>
             <h4 className="font-bold text-white mb-4">Links</h4>
-            <ul className="space-y-2">
-              <li><Link href="/kurse" className="hover:text-primary-400">Kurse</Link></li>
-              <li><Link href="/ueber-uns" className="hover:text-primary-400">Über uns</Link></li>
-              <li><Link href="/faq" className="hover:text-primary-400">FAQ</Link></li>
-              <li><Link href="/kontakt" className="hover:text-primary-400">Kontakt</Link></li>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/kurse" className="hover:text-primary-400 transition-colors">Kurse</Link></li>
+              <li><Link href="/lehrer" className="hover:text-primary-400 transition-colors">Lehrer</Link></li>
+              <li><Link href="/ueber-uns" className="hover:text-primary-400 transition-colors">Über uns</Link></li>
+              <li><Link href="/faq" className="hover:text-primary-400 transition-colors">FAQ</Link></li>
+              <li><Link href="/kontakt" className="hover:text-primary-400 transition-colors">Kontakt</Link></li>
             </ul>
           </div>
           
           {/* Legal */}
           <div>
             <h4 className="font-bold text-white mb-4">Rechtliches</h4>
-            <ul className="space-y-2">
-              <li><Link href="/impressum" className="hover:text-primary-400">Impressum</Link></li>
-              <li><Link href="/datenschutz" className="hover:text-primary-400">Datenschutz</Link></li>
-              <li><Link href="/agb" className="hover:text-primary-400">AGB</Link></li>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/impressum" className="hover:text-primary-400 transition-colors">Impressum</Link></li>
+              <li><Link href="/datenschutz" className="hover:text-primary-400 transition-colors">Datenschutz</Link></li>
+              <li><Link href="/agb" className="hover:text-primary-400 transition-colors">AGB</Link></li>
             </ul>
+          </div>
+          
+          {/* Newsletter */}
+          <div>
+            <Newsletter variant="footer" />
           </div>
         </div>
         
@@ -488,12 +511,19 @@ export default async function HomePage() {
         {/* @ts-expect-error Async Server Component */}
         <HeroSection />
         <FeaturesSection />
+        {/* Unterrichtsplan-Kalender */}
+        <ScheduleCalendar />
         {/* @ts-expect-error Async Server Component */}
         <CoursesPreview />
+        {/* Newsletter Sektion */}
+        <section className="py-16 bg-white">
+          <div className="container-custom max-w-4xl">
+            <Newsletter />
+          </div>
+        </section>
         <CTASection />
       </main>
       <Footer />
     </>
   );
 }
-

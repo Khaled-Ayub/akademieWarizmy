@@ -46,7 +46,7 @@ if [ "$ENVIRONMENT" == "production" ]; then
     
     # Datenbank-Backup
     BACKUP_FILE="$BACKUP_DIR/db_$(date +%Y%m%d_%H%M%S).sql.gz"
-    docker exec warizmy-postgres-app pg_dumpall -U warizmy | gzip > $BACKUP_FILE
+    docker exec warizmy-postgres pg_dumpall -U warizmy | gzip > $BACKUP_FILE
     echo "✅ Datenbank-Backup erstellt: $BACKUP_FILE"
     
     # Alte Backups löschen (älter als 7 Tage)
@@ -150,6 +150,5 @@ echo ""
 echo "Services:"
 echo "  - Frontend:  https://ac.warizmy.com"
 echo "  - Backend:   https://ac.warizmy.com/api"
-echo "  - Strapi:    https://ac.warizmy.com/cms"
+echo "  - Admin:     https://ac.warizmy.com/admin"
 echo ""
-

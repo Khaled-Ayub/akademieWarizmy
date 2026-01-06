@@ -1,17 +1,18 @@
 // ===========================================
 // WARIZMY EDUCATION - Kurse Übersicht
 // ===========================================
-// Zeigt alle verfügbaren Kurse von Strapi
+// Zeigt alle verfügbaren Kurse von der API
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { BookOpen, Star, Clock, Users, ChevronRight, Filter } from 'lucide-react';
 import { 
   getCourses, 
   Course, 
   getCategoryLabel, 
   getLevelLabel,
-  getStrapiMediaUrl 
-} from '@/lib/strapi';
+  getMediaUrl 
+} from '@/lib/content';
 
 // Metadata für SEO
 export const metadata = {
@@ -25,9 +26,15 @@ function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
       <div className="container-custom">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-white" />
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm">
+              <Image
+                src="/images/Logo/full (1).jpg"
+                alt="WARIZMY Logo"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
             <span className="font-heading text-xl font-bold text-gray-900">
               WARIZMY
@@ -69,10 +76,10 @@ function CourseCard({ course }: { course: Course }) {
     <div className="card-hover group">
       {/* Thumbnail */}
       <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-600 relative overflow-hidden">
-        {course.attributes.thumbnail?.data ? (
+        {course.thumbnail_url ? (
           <img 
-            src={getStrapiMediaUrl(course.attributes.thumbnail.data)}
-            alt={course.attributes.title}
+            src={getMediaUrl(course.thumbnail_url)}
+            alt={course.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -87,12 +94,12 @@ function CourseCard({ course }: { course: Course }) {
         {/* Kategorie Badge */}
         <div className="absolute bottom-4 left-4">
           <span className="badge-primary">
-            {getCategoryLabel(course.attributes.category)}
+            {getCategoryLabel(course.category)}
           </span>
         </div>
         
         {/* Featured Badge */}
-        {course.attributes.is_featured && (
+        {course.is_featured && (
           <div className="absolute top-4 right-4">
             <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Star className="w-3 h-3 fill-current" />
@@ -107,25 +114,25 @@ function CourseCard({ course }: { course: Course }) {
         {/* Meta */}
         <div className="flex items-center gap-2 mb-3">
           <span className="badge-secondary">
-            {getLevelLabel(course.attributes.level)}
+            {getLevelLabel(course.level)}
           </span>
-          {course.attributes.duration_weeks && (
+          {course.duration_weeks && (
             <span className="flex items-center text-sm text-gray-500">
               <Clock className="w-4 h-4 mr-1" />
-              {course.attributes.duration_weeks} Wochen
+              {course.duration_weeks} Wochen
             </span>
           )}
         </div>
         
         {/* Titel */}
         <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-500 transition-colors">
-          {course.attributes.title}
+          {course.title}
         </h3>
         
         {/* Beschreibung */}
-        {course.attributes.short_description && (
+        {course.short_description && (
           <p className="text-gray-600 text-sm line-clamp-2 mb-4">
-            {course.attributes.short_description}
+            {course.short_description}
           </p>
         )}
         
@@ -133,9 +140,9 @@ function CourseCard({ course }: { course: Course }) {
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           {/* Preis */}
           <div>
-            {course.attributes.price > 0 ? (
+            {course.price > 0 ? (
               <span className="text-lg font-bold text-primary-600">
-                €{course.attributes.price}
+                €{course.price}
               </span>
             ) : (
               <span className="text-lg font-bold text-green-600">
@@ -146,7 +153,7 @@ function CourseCard({ course }: { course: Course }) {
           
           {/* Link */}
           <Link 
-            href={`/kurse/${course.attributes.slug}`}
+            href={`/kurse/${course.slug}`}
             className="inline-flex items-center text-primary-500 font-medium hover:text-primary-600"
           >
             Details
@@ -170,14 +177,13 @@ function EmptyState() {
       </h3>
       <p className="text-gray-600 mb-6 max-w-md mx-auto">
         Unsere Kurse werden bald hier erscheinen. 
-        Fügen Sie Kurse in Strapi hinzu, um sie anzuzeigen.
+        Fügen Sie Kurse im Admin-Bereich hinzu, um sie anzuzeigen.
       </p>
       <Link 
-        href="http://localhost:1337/admin/content-manager/collectionType/api::course.course"
-        target="_blank"
+        href="/admin/kurse"
         className="btn-primary"
       >
-        Kurs in Strapi erstellen
+        Kurse verwalten
       </Link>
     </div>
   );
@@ -185,7 +191,7 @@ function EmptyState() {
 
 // Hauptseite
 export default async function KursePage() {
-  // Kurse von Strapi laden
+  // Kurse von API laden
   const courses = await getCourses();
 
   return (
@@ -233,4 +239,3 @@ export default async function KursePage() {
     </>
   );
 }
-

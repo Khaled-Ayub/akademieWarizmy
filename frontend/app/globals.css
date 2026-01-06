@@ -10,10 +10,10 @@
    CSS Variables
    =========================================== */
 :root {
-  /* Primärfarbe (Petrol/Türkis) */
-  --color-primary: 0 139 139;
-  --color-primary-light: 51 191 191;
-  --color-primary-dark: 0 85 85;
+  /* Primärfarbe (Dunkles Blau - WARIZMY Brand) */
+  --color-primary: 19 31 47;
+  --color-primary-light: 91 116 138;
+  --color-primary-dark: 13 21 33;
   
   /* Sekundärfarbe (Gold) */
   --color-secondary: 197 147 10;
@@ -184,7 +184,7 @@
 @layer utilities {
   /* Geometrisches Muster Overlay */
   .pattern-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23008B8B' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23131f2f' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
   
   /* Gradient Text */
@@ -199,7 +199,7 @@
   }
   
   .hover-glow:hover {
-    box-shadow: 0 0 30px rgba(0, 139, 139, 0.3);
+    box-shadow: 0 0 30px rgba(19, 31, 47, 0.3);
   }
   
   /* Animation Delays */
@@ -283,5 +283,131 @@
 .announcement-banner {
   /* Schatten für Tiefe */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ===========================================
+   Toast Animationen
+   =========================================== */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* ===========================================
+   Tiptap Editor Styles
+   =========================================== */
+
+/* Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9CA3AF;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Focus Outline entfernen */
+.ProseMirror:focus {
+  outline: none;
+}
+
+/* Task List Styling */
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  @apply w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500;
+}
+
+/* Blockquote Styling */
+.ProseMirror blockquote {
+  @apply border-l-4 border-primary-300 pl-4 py-2 my-4 bg-primary-50/30 italic text-gray-600;
+}
+
+/* Code Block Styling */
+.ProseMirror pre {
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm my-4;
+}
+
+.ProseMirror code {
+  @apply bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.ProseMirror pre code {
+  @apply bg-transparent text-inherit p-0;
+}
+
+/* Horizontal Rule */
+.ProseMirror hr {
+  @apply my-6 border-t-2 border-gray-200;
+}
+
+/* Headings */
+.ProseMirror h1 {
+  @apply text-2xl font-bold mt-6 mb-3 text-gray-900;
+}
+
+.ProseMirror h2 {
+  @apply text-xl font-bold mt-5 mb-2 text-gray-900;
+}
+
+.ProseMirror h3 {
+  @apply text-lg font-semibold mt-4 mb-2 text-gray-900;
+}
+
+/* Lists */
+.ProseMirror ul, .ProseMirror ol {
+  @apply pl-6 my-3;
+}
+
+.ProseMirror ul {
+  @apply list-disc;
+}
+
+.ProseMirror ol {
+  @apply list-decimal;
+}
+
+.ProseMirror li {
+  @apply my-1;
+}
+
+/* Links */
+.ProseMirror a {
+  @apply text-primary-600 underline hover:text-primary-700;
+}
+
+/* Images */
+.ProseMirror img {
+  @apply rounded-lg max-w-full h-auto my-4;
+}
+
+/* Highlight */
+.ProseMirror mark {
+  @apply bg-yellow-200 px-0.5 rounded;
 }
 

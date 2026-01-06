@@ -6,7 +6,6 @@ Eine Lernplattform für Arabisch und islamische Bildung mit Vor-Ort-Unterricht, 
 
 - **Frontend**: Next.js 14+ (App Router), TypeScript, Tailwind CSS
 - **Backend**: FastAPI, SQLAlchemy 2.0, Alembic
-- **CMS**: Strapi v5
 - **Datenbank**: PostgreSQL 16
 - **Cache**: Redis
 - **Storage**: MinIO (S3-kompatibel)
@@ -23,7 +22,7 @@ Eine Lernplattform für Arabisch und islamische Bildung mit Vor-Ort-Unterricht, 
 ### 1. Umgebungsvariablen konfigurieren
 
 ```bash
-cp .env.example .env
+cp env.example .env
 # .env Datei mit eigenen Werten anpassen
 ```
 
@@ -41,9 +40,9 @@ docker-compose up -d
 
 ## Zugriff
 
-- **Frontend**: http://localhost:3000 (Dev) / https://ac.warizmy.com (Prod)
+- **Frontend**: http://localhost:3002 (Dev) / https://ac.warizmy.com (Prod)
 - **Backend API**: http://localhost:8000/api
-- **Strapi Admin**: http://localhost:1337/admin
+- **Admin Dashboard**: http://localhost:3002/admin
 - **MinIO Console**: http://localhost:9001
 
 ## Projektstruktur
@@ -52,7 +51,6 @@ docker-compose up -d
 warizmy-education/
 ├── frontend/          # Next.js Frontend
 ├── backend/           # FastAPI Backend
-├── strapi/            # Strapi CMS
 ├── nginx/             # Nginx Reverse Proxy
 ├── scripts/           # Deployment & Backup Scripts
 ├── docker-compose.yml # Produktion
@@ -79,14 +77,6 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### Strapi
-
-```bash
-cd strapi
-npm install
-npm run develop
-```
-
 ## Deployment
 
 Siehe `scripts/deploy.sh` für automatisiertes Deployment auf Hetzner.
@@ -94,4 +84,3 @@ Siehe `scripts/deploy.sh` für automatisiertes Deployment auf Hetzner.
 ## Lizenz
 
 Proprietär - Alle Rechte vorbehalten.
-

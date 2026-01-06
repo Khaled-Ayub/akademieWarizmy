@@ -10,7 +10,6 @@ import Cookies from 'js-cookie';
 // Konfiguration
 // =========================================
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337';
 
 // =========================================
 // Token Management
@@ -132,17 +131,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// =========================================
-// Strapi Client
-// =========================================
-export const strapiApi: AxiosInstance = axios.create({
-  baseURL: `${STRAPI_URL}/api`,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
 // =========================================
 // API Funktionen
@@ -289,7 +277,7 @@ export const usersApi = {
   /**
    * Meinen Fortschritt abrufen
    */
-  getMyProgress: async (courseId?: number) => {
+  getMyProgress: async (courseId?: string) => {
     const url = courseId 
       ? `/users/me/progress?course_id=${courseId}` 
       : '/users/me/progress';
@@ -361,7 +349,7 @@ export const examsApi = {
   /**
    * Verfügbare Prüfungstermine abrufen
    */
-  getSlots: async (courseId?: number) => {
+  getSlots: async (courseId?: string) => {
     const url = courseId 
       ? `/exams/slots?course_id=${courseId}` 
       : '/exams/slots';
@@ -372,7 +360,7 @@ export const examsApi = {
   /**
    * PVL-Status abrufen
    */
-  getPVLStatus: async (courseId: number) => {
+  getPVLStatus: async (courseId: string) => {
     const response = await api.get(`/exams/my-pvl/${courseId}`);
     return response.data;
   },
@@ -405,14 +393,22 @@ export const examsApi = {
 };
 
 // =========================================
-// Strapi API (für Kursinhalte)
+// Courses API (jetzt über FastAPI)
 // =========================================
 export const coursesApi = {
   /**
    * Alle Kurse abrufen
    */
   getAll: async () => {
-    const response = await strapiApi.get('/courses?populate=*');
+    const response = await api.get('/courses');
+    return response.data;
+  },
+
+  /**
+   * Featured Kurse abrufen
+   */
+  getFeatured: async (limit: number = 6) => {
+    const response = await api.get(`/courses/featured?limit=${limit}`);
     return response.data;
   },
 
@@ -420,18 +416,84 @@ export const coursesApi = {
    * Einzelnen Kurs abrufen
    */
   getBySlug: async (slug: string) => {
-    const response = await strapiApi.get(`/courses?filters[slug][$eq]=${slug}&populate=*`);
-    return response.data.data[0];
+    const response = await api.get(`/courses/${slug}`);
+    return response.data;
   },
 
   /**
-   * Lektionen eines Kurses abrufen
+   * Kurse nach Kategorie abrufen
    */
-  getLessons: async (courseId: number) => {
-    const response = await strapiApi.get(`/lessons?filters[course][id][$eq]=${courseId}&populate=*&sort=order:asc`);
+  getByCategory: async (category: string) => {
+    const response = await api.get(`/courses?category=${category}`);
+    return response.data;
+  },
+
+  /**
+   * Kurse durchsuchen
+   */
+  search: async (query: string) => {
+    const response = await api.get(`/courses?search=${encodeURIComponent(query)}`);
+    return response.data;
+  },
+};
+
+// =========================================
+// Content API (Lehrer, FAQs, etc.)
+// =========================================
+export const contentApi = {
+  /**
+   * Alle Lehrer abrufen
+   */
+  getTeachers: async () => {
+    const response = await api.get('/content/teachers');
+    return response.data;
+  },
+
+  /**
+   * Einzelnen Lehrer abrufen
+   */
+  getTeacher: async (slug: string) => {
+    const response = await api.get(`/content/teachers/${slug}`);
+    return response.data;
+  },
+
+  /**
+   * FAQs abrufen
+   */
+  getFAQs: async (category?: string) => {
+    const url = category ? `/content/faqs?category=${category}` : '/content/faqs';
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  /**
+   * Testimonials abrufen
+   */
+  getTestimonials: async (options?: { featured?: boolean; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.featured !== undefined) params.append('featured', String(options.featured));
+    if (options?.limit) params.append('limit', String(options.limit));
+    
+    const url = `/content/testimonials${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  /**
+   * Ankündigungen abrufen
+   */
+  getAnnouncements: async () => {
+    const response = await api.get('/content/announcements');
+    return response.data;
+  },
+
+  /**
+   * Tageshinweis abrufen
+   */
+  getDailyGuidance: async (isRamadan: boolean = false) => {
+    const response = await api.get(`/content/daily-guidance?is_ramadan=${isRamadan}`);
     return response.data;
   },
 };
 
 export default api;
-

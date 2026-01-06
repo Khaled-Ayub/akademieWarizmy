@@ -13,10 +13,16 @@ from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.core.config import get_settings
-from app.models.user import User
-from app.models.exam import ExamSlot, ExamBooking, ExamBookingStatus, ExamResult
-from app.models.session import Attendance, AttendanceStatus
-from app.models.class_model import ClassEnrollment
+from app.models import (
+    User,
+    ExamSlot,
+    ExamBooking,
+    ExamBookingStatus,
+    ExamResult,
+    Attendance,
+    AttendanceStatus,
+    ClassEnrollment,
+)
 from app.routers.auth import get_current_user
 
 settings = get_settings()
@@ -30,7 +36,7 @@ class ExamSlotResponse(BaseModel):
     """Schema für Prüfungstermin"""
     id: str
     class_id: str
-    strapi_course_id: int
+    course_id: int
     scheduled_at: datetime
     duration_minutes: int
     is_available: bool
@@ -95,7 +101,7 @@ async def calculate_pvl_status(
     PVL ist erfüllt bei mindestens 80% Anwesenheit.
     """
     # Alle Sessions der Klasse zählen (vergangene, nicht abgesagte)
-    from app.models.session import LiveSession
+    from app.models import LiveSession
     
     result = await db.execute(
         select(func.count(LiveSession.id))
@@ -155,7 +161,7 @@ async def get_exam_slots(
     query = select(ExamSlot).where(ExamSlot.scheduled_at > datetime.utcnow())
     
     if course_id:
-        query = query.where(ExamSlot.strapi_course_id == course_id)
+        query = query.where(ExamSlot.course_id == course_id)
     
     if available_only:
         query = query.where(ExamSlot.is_booked == False)
@@ -169,7 +175,7 @@ async def get_exam_slots(
         ExamSlotResponse(
             id=str(s.id),
             class_id=str(s.class_id),
-            strapi_course_id=s.strapi_course_id,
+            course_id=s.course_id,
             scheduled_at=s.scheduled_at,
             duration_minutes=s.duration_minutes,
             is_available=not s.is_booked,
@@ -188,13 +194,13 @@ async def get_my_pvl_status(
     Meinen PVL-Status für einen Kurs abrufen.
     """
     # Klasse finden, in der der Student eingeschrieben ist
-    from app.models.class_model import Class
+    from app.models import Class
     
     result = await db.execute(
         select(ClassEnrollment)
         .join(Class)
         .where(ClassEnrollment.user_id == current_user.id)
-        .where(Class.strapi_course_id == course_id)
+        .where(Class.course_id == course_id)
     )
     enrollment = result.scalar_one_or_none()
     
@@ -267,7 +273,7 @@ async def book_exam(
         select(ExamBooking)
         .join(ExamSlot)
         .where(ExamBooking.user_id == current_user.id)
-        .where(ExamSlot.strapi_course_id == slot.strapi_course_id)
+        .where(ExamSlot.course_id == slot.course_id)
         .where(ExamBooking.status.in_([ExamBookingStatus.SCHEDULED, ExamBookingStatus.COMPLETED]))
     )
     existing_booking = result.scalar_one_or_none()
@@ -299,7 +305,7 @@ async def book_exam(
         exam_slot=ExamSlotResponse(
             id=str(slot.id),
             class_id=str(slot.class_id),
-            strapi_course_id=slot.strapi_course_id,
+            course_id=slot.course_id,
             scheduled_at=slot.scheduled_at,
             duration_minutes=slot.duration_minutes,
             is_available=False,
@@ -336,7 +342,7 @@ async def get_my_bookings(
             exam_slot=ExamSlotResponse(
                 id=str(b.exam_slot.id),
                 class_id=str(b.exam_slot.class_id),
-                strapi_course_id=b.exam_slot.strapi_course_id,
+                course_id=b.exam_slot.course_id,
                 scheduled_at=b.exam_slot.scheduled_at,
                 duration_minutes=b.exam_slot.duration_minutes,
                 is_available=not b.exam_slot.is_booked,
@@ -360,7 +366,7 @@ async def get_my_grades(
     Meine Noten abrufen.
     """
     from sqlalchemy.orm import selectinload
-    from app.models.certificate import Certificate
+    from app.models import Certificate
     
     result = await db.execute(
         select(ExamBooking)
@@ -371,13 +377,13 @@ async def get_my_grades(
     bookings = result.scalars().all()
     
     # Zertifikate laden
-    course_ids = [b.exam_slot.strapi_course_id for b in bookings]
+    course_ids = [b.exam_slot.course_id for b in bookings]
     result = await db.execute(
         select(Certificate)
         .where(Certificate.user_id == current_user.id)
-        .where(Certificate.strapi_course_id.in_(course_ids))
+        .where(Certificate.course_id.in_(course_ids))
     )
-    certificates = {c.strapi_course_id: c for c in result.scalars().all()}
+    certificates = {c.course_id: c for c in result.scalars().all()}
     
     grades = []
     for b in bookings:
@@ -394,12 +400,12 @@ async def get_my_grades(
             grade_display = f"{b.grade} ({grade_names.get(grade_float, '')})"
         
         grades.append(GradeResponse(
-            course_id=b.exam_slot.strapi_course_id,
+            course_id=b.exam_slot.course_id,
             grade=float(b.grade) if b.grade else None,
             grade_display=grade_display,
             result=b.result.value if b.result else None,
             examined_at=b.examined_at,
-            certificate_issued=b.exam_slot.strapi_course_id in certificates,
+            certificate_issued=b.exam_slot.course_id in certificates,
         ))
     
     return grades

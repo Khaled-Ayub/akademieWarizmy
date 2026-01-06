@@ -17,18 +17,18 @@ module.exports = {
     extend: {
       // Benutzerdefinierte Farben
       colors: {
-        // Primärfarbe (Petrol/Türkis - islamische Ästhetik)
+        // Primärfarbe (Dunkles Blau - WARIZMY Brand)
         primary: {
-          50: '#e6f7f7',
-          100: '#ccefef',
-          200: '#99dfdf',
-          300: '#66cfcf',
-          400: '#33bfbf',
-          500: '#008B8B', // Hauptfarbe
-          600: '#007070',
-          700: '#005555',
-          800: '#003b3b',
-          900: '#002020',
+          50: '#e8ebed',
+          100: '#c5cdd3',
+          200: '#9fadb8',
+          300: '#788d9d',
+          400: '#5b748a',
+          500: '#131f2f', // Hauptfarbe
+          600: '#101a28',
+          700: '#0d1521',
+          800: '#0a101a',
+          900: '#070b13',
         },
         // Sekundärfarbe (Gold/Amber)
         secondary: {

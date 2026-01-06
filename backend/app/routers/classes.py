@@ -12,9 +12,14 @@ from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
 from app.db.session import get_db
-from app.models.user import User, UserRole
-from app.models.class_model import Class, ClassSchedule, ClassEnrollment
-from app.models.session import LiveSession
+from app.models import (
+    User,
+    UserRole,
+    Class,
+    ClassSchedule,
+    ClassEnrollment,
+    LiveSession,
+)
 from app.routers.auth import get_current_user, require_role
 
 router = APIRouter()
@@ -40,7 +45,7 @@ class ClassScheduleResponse(BaseModel):
 class ClassResponse(BaseModel):
     """Schema für Klasse"""
     id: str
-    strapi_course_id: int
+    course_id: int
     name: str
     description: Optional[str]
     start_date: date
@@ -135,7 +140,7 @@ async def get_class(
     # Response erstellen
     return ClassDetailResponse(
         id=str(class_.id),
-        strapi_course_id=class_.strapi_course_id,
+        course_id=class_.course_id,
         name=class_.name,
         description=class_.description,
         start_date=class_.start_date,

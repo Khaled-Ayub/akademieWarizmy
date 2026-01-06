@@ -10,22 +10,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 // =========================================
-// TypeScript Typen
+// TypeScript Typen (neue flache Struktur von FastAPI)
 // =========================================
 
-// Ankündigung aus Strapi
 interface Announcement {
-  id: number;
-  attributes: {
-    text: string;
-    is_active: boolean;
-    priority: number;
-    start_date?: string;
-    end_date?: string;
-    link_url?: string;
-    link_text?: string;
-    publishedAt?: string;
-  };
+  id: string;
+  text: string;
+  is_active: boolean;
+  priority: number;
+  start_date?: string;
+  end_date?: string;
+  link_url?: string;
+  link_text?: string;
 }
 
 // Props für die Komponente
@@ -35,9 +31,9 @@ interface AnnouncementBannerProps {
 }
 
 // =========================================
-// Strapi URL Konfiguration
+// API URL Konfiguration
 // =========================================
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // =========================================
 // Komponente
@@ -62,25 +58,13 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
     const fetchAnnouncements = async () => {
       try {
-        // Aktuelles Datum für Filter
-        const now = new Date().toISOString();
-        
-        // Ankündigungen von Strapi abrufen
-        // Filter: aktiv, veröffentlicht, im gültigen Zeitraum
-        const response = await fetch(
-          `${STRAPI_URL}/api/announcements?` +
-          `filters[is_active][$eq]=true&` +
-          `filters[$or][0][start_date][$null]=true&` +
-          `filters[$or][1][start_date][$lte]=${now}&` +
-          `filters[$or][0][end_date][$null]=true&` +
-          `filters[$or][1][end_date][$gte]=${now}&` +
-          `sort=priority:desc&` +
-          `pagination[limit]=10`
-        );
+        // Ankündigungen von FastAPI abrufen
+        const response = await fetch(`${API_URL}/content/announcements`);
 
         if (response.ok) {
           const data = await response.json();
-          setAnnouncements(data.data || []);
+          // FastAPI gibt direkt ein Array zurück
+          setAnnouncements(data || []);
         }
       } catch (error) {
         console.error('Fehler beim Laden der Ankündigungen:', error);
@@ -108,9 +92,9 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
   // Alle Ankündigungstexte zusammenfügen
   const announcementText = announcements
     .map((a, index) => {
-      const text = a.attributes.text;
-      const linkUrl = a.attributes.link_url;
-      const linkText = a.attributes.link_text || 'Mehr erfahren';
+      const text = a.text;
+      const linkUrl = a.link_url;
+      const linkText = a.link_text || 'Mehr erfahren';
       
       // Mit oder ohne Link
       if (linkUrl) {
@@ -188,4 +172,3 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
     </div>
   );
 }
-
