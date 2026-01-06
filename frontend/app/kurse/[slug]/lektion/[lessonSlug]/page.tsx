@@ -214,16 +214,6 @@ interface HomeworkDisplay {
   text_content?: string;
   pdf_url?: string;
   pdf_name?: string;
-  vocabulary_list_id?: string;
-  vocabulary_list?: {
-    id: string;
-    title: string;
-    title_arabic?: string;
-    slug: string;
-    item_count: number;
-    level: string;
-    word_type: string;
-  };
 }
 
 function HomeworkSection({ homework }: { homework?: HomeworkDisplay[] }) {
@@ -328,38 +318,6 @@ function HomeworkSection({ homework }: { homework?: HomeworkDisplay[] }) {
                   <Download className="w-4 h-4" />
                   {hw.pdf_name || 'PDF herunterladen'}
                 </a>
-              </div>
-            )}
-            
-            {/* Vokabelliste (wenn zugeordnet) */}
-            {hw.vocabulary_list && (
-              <div className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg border border-purple-200">
-                <div className="flex items-center gap-2 text-purple-700 mb-3">
-                  <BookOpen className="w-5 h-5" />
-                  <span className="font-medium">📚 Vokabeln lernen</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-semibold text-gray-900">{hw.vocabulary_list.title}</p>
-                    {hw.vocabulary_list.title_arabic && (
-                      <p className="text-sm text-gray-500 font-arabic" dir="rtl">{hw.vocabulary_list.title_arabic}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      {hw.vocabulary_list.item_count} Vokabeln • {hw.vocabulary_list.level.toUpperCase()} •
-                      {hw.vocabulary_list.word_type === 'verb' ? ' ⚡ Verben' : hw.vocabulary_list.word_type === 'particle' ? ' 🔗 Partikel' : ' 📦 Nomen'}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/vokabeln/${hw.vocabulary_list.slug}`}
-                    className="inline-flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-violet-700 transition-all"
-                  >
-                    <GraduationCap className="w-5 h-5" />
-                    Vokabeln lernen
-                  </Link>
-                </div>
-                <p className="text-xs text-purple-600 mt-3">
-                  💡 Lerne mit Karteikarten oder teste dein Wissen im Quiz!
-                </p>
               </div>
             )}
             

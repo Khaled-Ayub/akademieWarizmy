@@ -50,13 +50,6 @@ class Homework(Base):
         index=True,
         comment="Lektions-ID"
     )
-    vocabulary_list_id = Column(
-        UUID(as_uuid=True), 
-        ForeignKey("vocabulary_lists.id", ondelete="SET NULL"), 
-        nullable=True, 
-        index=True,
-        comment="Zugeordnete Vokabelliste (optional)"
-    )
     
     # =========================================
     # Basis-Informationen
@@ -200,10 +193,6 @@ class Homework(Base):
         "HomeworkSubmission",
         back_populates="homework",
         cascade="all, delete-orphan"
-    )
-    vocabulary_list = relationship(
-        "VocabularyList",
-        back_populates="homework_assignments"
     )
     
     def __repr__(self) -> str:

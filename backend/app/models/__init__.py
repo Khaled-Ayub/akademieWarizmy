@@ -118,18 +118,6 @@ from app.models.system import (
     EmailStatus,
 )
 
-# Vocabulary-Modelle (Vokabeln Arabisch-Deutsch)
-from app.models.vocabulary import (
-    VocabularyList,
-    VocabularyItem,
-    WordType,
-    NounCategory,
-    VerbCategory,
-    ParticleCategory,
-    VocabularyLevel,
-)
-
-
 # Alle Modelle für Alembic-Migrationen verfügbar machen
 __all__ = [
     # =========================================
@@ -223,15 +211,4 @@ __all__ = [
     "EmailLog",
     "EmailType",
     "EmailStatus",
-    
-    # =========================================
-    # Vocabulary (Vokabeln Arabisch-Deutsch)
-    # =========================================
-    "VocabularyList",
-    "VocabularyItem",
-    "WordType",
-    "NounCategory",
-    "VerbCategory",
-    "ParticleCategory",
-    "VocabularyLevel",
 ]

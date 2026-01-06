@@ -21,7 +21,6 @@ from app.routers import (
     content,
     upload,
     homework,
-    vocabulary,
 )
 
 # Haupt-Router für API v1
@@ -142,14 +141,5 @@ api_router.include_router(
     admin.router,
     prefix="/admin",
     tags=["Admin"]
-)
-
-# =========================================
-# Vokabeln (Arabisch-Deutsch)
-# =========================================
-api_router.include_router(
-    vocabulary.router,
-    prefix="/vocabulary",
-    tags=["Vokabeln"]
 )
 

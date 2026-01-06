@@ -15,7 +15,6 @@
 # - admin.py        → Admin-Bereich
 # - courses.py      → Kurse & Lektionen (Content)
 # - content.py      → Lehrer, FAQs, Testimonials, etc.
-# - vocabulary.py   → Vokabeln (Arabisch-Deutsch)
 
 from app.routers import (
     auth,
@@ -30,7 +29,6 @@ from app.routers import (
     courses,
     content,
     upload,
-    vocabulary,
 )
 
 __all__ = [
@@ -46,5 +44,4 @@ __all__ = [
     "courses",
     "content",
     "upload",
-    "vocabulary",
 ]
