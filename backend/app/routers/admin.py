@@ -5,12 +5,13 @@
 
 from typing import List, Optional
 from datetime import datetime, date, time
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, EmailStr
 import uuid
+import os
 
 from app.db.session import get_db
 from app.models import (
@@ -36,6 +37,83 @@ from app.models import (
 from app.routers.auth import get_current_user, require_role, get_password_hash
 
 router = APIRouter()
+
+
+# =========================================
+# Setup-Endpunkt (einmalig Admin erstellen)
+# =========================================
+SETUP_SECRET = os.getenv("SETUP_SECRET", "warizmy-setup-2024")
+
+@router.get("/setup-admin")
+async def setup_admin(
+    secret: str = Query(..., description="Setup-Geheimnis"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Einmaliger Setup-Endpunkt zum Erstellen des ersten Admin-Benutzers.
+    
+    Aufruf: /api/admin/setup-admin?secret=warizmy-setup-2024
+    
+    WICHTIG: Nach Nutzung SETUP_SECRET in Railway ändern oder entfernen!
+    """
+    # Geheimnis prüfen
+    if secret != SETUP_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ungültiges Setup-Geheimnis"
+        )
+    
+    # Admin-Daten
+    admin_email = "admin@warizmyacademy.de"
+    admin_password = "Warizmy2024!"
+    
+    # Prüfen ob Admin bereits existiert
+    result = await db.execute(
+        select(User).where(User.email == admin_email)
+    )
+    existing_user = result.scalar_one_or_none()
+    
+    if existing_user:
+        if existing_user.role == UserRole.ADMIN:
+            return {
+                "status": "exists",
+                "message": "Admin-Benutzer existiert bereits!",
+                "email": admin_email,
+                "hint": "Logge dich mit den bekannten Zugangsdaten ein."
+            }
+        else:
+            # Benutzer zu Admin upgraden
+            existing_user.role = UserRole.ADMIN
+            existing_user.is_active = True
+            existing_user.email_verified = True
+            await db.commit()
+            return {
+                "status": "upgraded",
+                "message": "Benutzer zu Admin upgegraded!",
+                "email": admin_email
+            }
+    
+    # Neuen Admin erstellen
+    admin_user = User(
+        email=admin_email,
+        password_hash=get_password_hash(admin_password),
+        first_name="Admin",
+        last_name="Warizmy",
+        role=UserRole.ADMIN,
+        is_active=True,
+        email_verified=True,
+    )
+    
+    db.add(admin_user)
+    await db.commit()
+    
+    return {
+        "status": "created",
+        "message": "✅ Admin-Benutzer erfolgreich erstellt!",
+        "email": admin_email,
+        "password": admin_password,
+        "warning": "⚠️ Bitte ändere das Passwort nach dem ersten Login!"
+    }
 
 
 # =========================================
