@@ -18,8 +18,7 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronRight,
-  Languages
+  ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import { ToastProvider } from '@/components/Toast';
@@ -38,11 +37,6 @@ const navItems = [
     href: '/admin/kurse', 
     label: 'Kurse & Lektionen', 
     icon: GraduationCap 
-  },
-  { 
-    href: '/admin/vokabeln', 
-    label: 'Vokabeln', 
-    icon: Languages,
   },
   { 
     href: '/admin/benutzer', 

@@ -225,16 +225,6 @@ interface HomeworkData {
   // PDF
   pdf_url?: string;
   pdf_name?: string;
-  // Vokabelliste
-  vocabulary_list_id?: string;
-  vocabulary_list_title?: string;
-}
-
-interface VocabularyListOption {
-  id: string;
-  title: string;
-  level: string;
-  item_count: number;
 }
 
 // Hausaufgaben Content-Typen
@@ -259,8 +249,6 @@ function HomeworkSection({
   const [showForm, setShowForm] = useState(false);
   const [editingHw, setEditingHw] = useState<HomeworkData | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [vocabularyLists, setVocabularyLists] = useState<VocabularyListOption[]>([]);
-  const [loadingVocab, setLoadingVocab] = useState(false);
   const [formData, setFormData] = useState<HomeworkData>({
     title: '',
     description: '',
@@ -273,35 +261,7 @@ function HomeworkSection({
     text_content: '',
     pdf_url: '',
     pdf_name: '',
-    vocabulary_list_id: '',
   });
-
-  // Vokabellisten laden
-  useEffect(() => {
-    if (showForm && vocabularyLists.length === 0) {
-      loadVocabularyLists();
-    }
-  }, [showForm]);
-
-  const loadVocabularyLists = async () => {
-    setLoadingVocab(true);
-    try {
-      const res = await fetch('/api/vocabulary/admin/lists');
-      if (res.ok) {
-        const data = await res.json();
-        setVocabularyLists(data.filter((v: any) => v.is_published).map((v: any) => ({
-          id: v.id,
-          title: v.title,
-          level: v.level,
-          item_count: v.item_count,
-        })));
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden der Vokabellisten:', error);
-    } finally {
-      setLoadingVocab(false);
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -316,7 +276,6 @@ function HomeworkSection({
       text_content: '',
       pdf_url: '',
       pdf_name: '',
-      vocabulary_list_id: '',
     });
     setShowForm(false);
     setEditingHw(null);
@@ -583,44 +542,6 @@ function HomeworkSection({
             </div>
           )}
 
-          {/* Vokabelliste zuordnen */}
-          <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-            <div className="flex items-center gap-2 text-amber-700">
-              <BookOpen className="w-4 h-4" />
-              <span className="text-sm font-medium">🔤 Vokabelliste (optional)</span>
-            </div>
-            <select
-              value={formData.vocabulary_list_id || ''}
-              onChange={(e) => {
-                const selectedList = vocabularyLists.find(v => v.id === e.target.value);
-                setFormData(prev => ({ 
-                  ...prev, 
-                  vocabulary_list_id: e.target.value || undefined,
-                  vocabulary_list_title: selectedList?.title
-                }));
-              }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              disabled={loadingVocab}
-            >
-              <option value="">Keine Vokabelliste zuordnen</option>
-              {vocabularyLists.map(list => (
-                <option key={list.id} value={list.id}>
-                  {list.title} ({list.level.toUpperCase()}, {list.item_count} Vokabeln)
-                </option>
-              ))}
-            </select>
-            {formData.vocabulary_list_id && (
-              <p className="text-xs text-amber-600">
-                ✓ Schüler müssen diese Vokabeln als Teil der Hausaufgabe lernen.
-              </p>
-            )}
-            {loadingVocab && (
-              <p className="text-xs text-gray-500 flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Lade Vokabellisten...
-              </p>
-            )}
-          </div>
-          
           {/* Abgabe-Einstellungen */}
           <div className="grid grid-cols-2 gap-3">
             <div>
