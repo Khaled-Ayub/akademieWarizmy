@@ -149,7 +149,7 @@ function PDFUpload({
     formData.append('folder', 'lessons/pdf');
     
     try {
-      const res = await fetch('/api/upload', {
+      const res = await fetch('/api/admin/upload', {
         method: 'POST',
         body: formData,
       });

@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // FastAPI URL
-const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000/api';
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 /**
  * GET /api/courses/search?q=suchbegriff

@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.API_INTERNAL_URL || 'http://backend:8000/api';
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // PUT - Lektion aktualisieren
 export async function PUT(

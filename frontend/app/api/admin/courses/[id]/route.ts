@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000/api';
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // GET - Einzelnen Kurs abrufen (Admin-Route für alle Kurse inkl. nicht veröffentlichte)
 export async function GET(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 // Für Server-Side API Calls: Interne Docker-URL verwenden
-const BACKEND_URL = process.env.API_INTERNAL_URL?.replace('/api', '') || 'http://backend:8000';
+const BACKEND_URL = process.env.API_INTERNAL_URL?.replace('/api', '') || process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
 
 // GET: Alle Vokabellisten abrufen (Admin)
 export async function GET(request: NextRequest) {

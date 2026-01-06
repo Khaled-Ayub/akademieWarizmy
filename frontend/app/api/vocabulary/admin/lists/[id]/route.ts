@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const BACKEND_URL = process.env.API_INTERNAL_URL?.replace('/api', '') || 'http://backend:8000';
+const BACKEND_URL = process.env.API_INTERNAL_URL?.replace('/api', '') || process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
 
 // PUT: Vokabelliste aktualisieren
 export async function PUT(

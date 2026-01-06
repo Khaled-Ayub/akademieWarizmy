@@ -5,8 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// Backend URL für Server-seitige Calls (Docker-Netzwerk)
-const API_URL = process.env.API_INTERNAL_URL || 'http://backend:8000/api';
+// Backend URL für Server-seitige Calls
+// Priorität: API_INTERNAL_URL > NEXT_PUBLIC_API_URL > localhost (dev only)
+const API_URL = process.env.API_INTERNAL_URL 
+  || process.env.NEXT_PUBLIC_API_URL 
+  || 'http://localhost:8000/api';
 
 export async function POST(request: NextRequest) {
   try {
