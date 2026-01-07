@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -311,8 +311,8 @@ function ScheduleEditor({
 // =========================================
 // Hauptseite
 // =========================================
-export default function KlasseBearbeitenPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function KlasseBearbeitenPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
