@@ -319,7 +319,12 @@ export default function NeueKlassePage() {
       try {
         const res = await fetch('/api/admin/courses');
         const data = await res.json();
-        setCourses(data.items || data.data || data || []);
+        const items =
+          Array.isArray(data?.items) ? data.items :
+          Array.isArray(data?.data) ? data.data :
+          Array.isArray(data) ? data :
+          [];
+        setCourses(items);
       } catch (err) {
         console.error('Error loading courses:', err);
       } finally {

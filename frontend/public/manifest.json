@@ -1,0 +1,25 @@
+{
+  "name": "WARIZMY Academy",
+  "short_name": "WARIZMY",
+  "description": "WARIZMY Academy - Arabisch & Islamunterricht",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/Logo/G1 5000x5000_blau.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/Logo/G1 5000x5000_blau.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

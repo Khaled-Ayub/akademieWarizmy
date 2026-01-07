@@ -79,32 +79,34 @@ async def get_public_sessions(
 ):
     """
     Öffentliche Sessions für Stundenplan auf Startseite.
-    Zeigt alle nicht-abgesagten Sessions im angegebenen Zeitraum.
+    Zeigt:
+    1. Konkrete LiveSessions (bereits erstellt)
+    2. Virtuelle Sessions aus ClassSchedules (wiederkehrende Termine)
     """
-    from app.models import Course, Class
+    from app.models import Course, Class, ClassSchedule
     
+    # Parse Datumsfilter
+    now = datetime.utcnow()
+    start = datetime.fromisoformat(from_date) if from_date else now
+    end = datetime.fromisoformat(to_date + "T23:59:59") if to_date else (now + timedelta(days=30))
+    
+    result_sessions = []
+    
+    # 1. Konkrete LiveSessions laden
     query = select(LiveSession).options(
         selectinload(LiveSession.class_),
         selectinload(LiveSession.course),
     ).where(LiveSession.is_cancelled == False)
     
-    # Datumsfilter
-    if from_date:
-        query = query.where(LiveSession.scheduled_at >= datetime.fromisoformat(from_date))
-    if to_date:
-        query = query.where(LiveSession.scheduled_at <= datetime.fromisoformat(to_date + "T23:59:59"))
-    
-    # Default: Nur zukünftige Sessions
-    if not from_date and not to_date:
-        query = query.where(LiveSession.scheduled_at >= datetime.utcnow())
-    
+    query = query.where(LiveSession.scheduled_at >= start)
+    query = query.where(LiveSession.scheduled_at <= end)
     query = query.order_by(LiveSession.scheduled_at).limit(50)
     
     result = await db.execute(query)
     sessions = result.scalars().all()
     
-    return [
-        {
+    for s in sessions:
+        result_sessions.append({
             "id": str(s.id),
             "title": s.title,
             "date": s.scheduled_at.strftime("%Y-%m-%d"),
@@ -114,16 +116,92 @@ async def get_public_sessions(
             "location": s.location,
             "zoom_link": s.zoom_join_url,
             "description": s.description,
-            "color": "primary",  # Kann je nach Kurstyp variieren
+            "color": "primary",
             "course": {
                 "id": str(s.course_id) if s.course_id else None,
                 "title": s.course.title if s.course else None,
                 "slug": s.course.slug if s.course else None,
             } if s.course_id else None,
-            "teacher": None,  # TODO: Lehrer aus Class laden
-        }
-        for s in sessions
-    ]
+            "teacher": None,
+        })
+    
+    # 2. Virtuelle Sessions aus ClassSchedules generieren
+    # Lade alle aktiven Klassen mit Schedules
+    query = select(Class).options(
+        selectinload(Class.schedules),
+        selectinload(Class.course),
+    ).where(Class.is_active == True)
+    
+    result = await db.execute(query)
+    classes = result.scalars().all()
+    
+    # Für jeden Schedule virtuelle Termine generieren
+    for cls in classes:
+        if not cls.schedules:
+            continue
+            
+        for schedule in cls.schedules:
+            # Generiere Termine für den Zeitraum
+            current = start
+            while current <= end:
+                # Finde den nächsten passenden Wochentag
+                days_ahead = schedule.day_of_week - current.weekday()
+                if days_ahead < 0:
+                    days_ahead += 7
+                
+                session_date = current + timedelta(days=days_ahead)
+                
+                # Prüfe ob im Zeitraum
+                if session_date > end:
+                    break
+                    
+                # Kombiniere Datum und Zeit
+                session_datetime = datetime.combine(
+                    session_date.date(),
+                    schedule.start_time
+                )
+                
+                # Nur zukünftige Termine
+                if session_datetime >= start and session_datetime <= end:
+                    # Prüfe ob bereits eine LiveSession existiert (vermeiden Duplikate)
+                    existing = any(
+                        s["date"] == session_date.strftime("%Y-%m-%d") and
+                        s["start_time"] == schedule.start_time.strftime("%H:%M:%S")
+                        for s in result_sessions
+                    )
+                    
+                    if not existing:
+                        # Farbe basierend auf Kurstyp
+                        color = "primary"
+                        if cls.course and cls.course.category:
+                            color = "purple" if cls.course.category.value == "islamic" else "primary"
+                        
+                        result_sessions.append({
+                            "id": f"schedule-{schedule.id}-{session_date.strftime('%Y%m%d')}",
+                            "title": cls.name,
+                            "date": session_date.strftime("%Y-%m-%d"),
+                            "start_time": schedule.start_time.strftime("%H:%M:%S"),
+                            "end_time": schedule.end_time.strftime("%H:%M:%S"),
+                            "type": schedule.session_type.value,
+                            "location": schedule.location,
+                            "zoom_link": schedule.zoom_join_url,
+                            "description": cls.description,
+                            "color": color,
+                            "course": {
+                                "id": str(cls.course_id) if cls.course_id else None,
+                                "title": cls.course.title if cls.course else None,
+                                "slug": cls.course.slug if cls.course else None,
+                            } if cls.course else None,
+                            "teacher": None,
+                        })
+                
+                # Nächste Woche
+                current = session_date + timedelta(days=1)
+    
+    # Nach Datum und Zeit sortieren
+    result_sessions.sort(key=lambda x: (x["date"], x["start_time"]))
+    
+    return result_sessions[:50]  # Limit auf 50
 
 
 # =========================================

@@ -169,10 +169,13 @@ export default function AdminKursePage() {
       try {
         const res = await fetch('/api/admin/courses', { cache: 'no-store' });
         const data = await res.json();
-        // FastAPI gibt { items: [...] } zurück
-        setCourses(data.items || []);
+        // FastAPI gibt { items: [...] } zurück - immer als Array behandeln
+        const items = Array.isArray(data?.items) ? data.items : 
+                      Array.isArray(data) ? data : [];
+        setCourses(items);
       } catch (error) {
         console.error('Error loading courses:', error);
+        setCourses([]); // Bei Fehler leeres Array setzen
       } finally {
         setLoading(false);
       }

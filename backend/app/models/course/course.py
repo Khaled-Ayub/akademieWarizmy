@@ -252,6 +252,12 @@ class Course(Base):
         foreign_keys=[default_location_id]
     )
     
+    # Klassen die diesen Kurs verwenden
+    classes = relationship(
+        "Class",
+        back_populates="course"
+    )
+    
     testimonials = relationship(
         "Testimonial", 
         back_populates="course",

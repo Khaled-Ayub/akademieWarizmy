@@ -28,17 +28,16 @@ export async function GET(request: NextRequest) {
     if (!res.ok) {
       const errorText = await res.text();
       console.error('API error response:', errorText);
-      return NextResponse.json({ error: errorText }, { status: res.status });
+      // Bei Fehlern leeres items-Array zurückgeben, damit Frontend nicht crasht
+      return NextResponse.json({ items: [], total: 0, error: errorText });
     }
 
     const data = await res.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching courses:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch courses', details: String(error) },
-      { status: 500 }
-    );
+    // Bei Fehlern leeres items-Array zurückgeben, damit Frontend nicht crasht
+    return NextResponse.json({ items: [], total: 0, error: String(error) });
   }
 }
 

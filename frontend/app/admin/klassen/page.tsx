@@ -43,7 +43,7 @@ interface ClassItem {
   max_students?: number;
   current_students: number;
   is_active: boolean;
-  schedules: ClassSchedule[];
+  schedules?: ClassSchedule[];
 }
 
 // =========================================
@@ -59,10 +59,28 @@ function ClassCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const isFull = classItem.max_students ? classItem.current_students >= classItem.max_students : false;
 
+  const schedules: ClassSchedule[] = Array.isArray(classItem.schedules) ? classItem.schedules : [];
+
   // Schedule als String formatieren
-  const scheduleString = classItem.schedules
-    .map(s => `${s.day_name.substring(0, 2)} ${s.start_time}`)
+  const scheduleString = schedules
+    .map((s) => {
+      const dayShort = (s.day_name || '').substring(0, 2);
+      const time = s.start_time || '';
+      return `${dayShort} ${time}`.trim();
+    })
+    .filter(Boolean)
     .join(', ');
+
+  const startDateLabel = (() => {
+    try {
+      if (!classItem.start_date) return '';
+      const d = new Date(classItem.start_date);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('de-DE', { month: 'short', year: 'numeric' });
+    } catch {
+      return '';
+    }
+  })();
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all">
@@ -141,7 +159,7 @@ function ClassCard({
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <Calendar className="w-4 h-4 text-gray-400" />
-            <span>{new Date(classItem.start_date).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' })}</span>
+            <span>{startDateLabel || '—'}</span>
           </div>
           {scheduleString && (
             <div className="flex items-center gap-2 text-gray-600 col-span-2">

@@ -119,6 +119,12 @@ class Class(Base):
     # =========================================
     # Relationships
     # =========================================
+    # Kurs dieser Klasse
+    course = relationship(
+        "Course",
+        back_populates="classes"
+    )
+    
     # Lehrer dieser Klasse
     teachers = relationship(
         "ClassTeacher", 
