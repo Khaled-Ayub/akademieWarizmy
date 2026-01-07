@@ -3,7 +3,7 @@
 # ===========================================
 # Authentifizierungs-Endpunkte (Login, Register, Password Reset)
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -52,6 +52,11 @@ class UserResponse(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str]
+    date_of_birth: Optional[date] = None
+    newsletter_opt_in: bool = False
+    whatsapp_opt_in: bool = False
+    whatsapp_channel_opt_in: bool = False
+    onboarding_completed: bool = False
     role: str
     is_active: bool
     email_verified: bool
@@ -307,6 +312,11 @@ async def register(
         first_name=new_user.first_name,
         last_name=new_user.last_name,
         phone=new_user.phone,
+        date_of_birth=new_user.date_of_birth,
+        newsletter_opt_in=new_user.newsletter_opt_in,
+        whatsapp_opt_in=new_user.whatsapp_opt_in,
+        whatsapp_channel_opt_in=new_user.whatsapp_channel_opt_in,
+        onboarding_completed=new_user.onboarding_completed,
         role=new_user.role.value,
         is_active=new_user.is_active,
         email_verified=new_user.email_verified,
@@ -364,6 +374,11 @@ async def login(
             first_name=user.first_name,
             last_name=user.last_name,
             phone=user.phone,
+            date_of_birth=user.date_of_birth,
+            newsletter_opt_in=user.newsletter_opt_in,
+            whatsapp_opt_in=user.whatsapp_opt_in,
+            whatsapp_channel_opt_in=user.whatsapp_channel_opt_in,
+            onboarding_completed=user.onboarding_completed,
             role=user.role.value,
             is_active=user.is_active,
             email_verified=user.email_verified,
@@ -434,6 +449,11 @@ async def get_me(current_user: User = Depends(get_current_user)):
         first_name=current_user.first_name,
         last_name=current_user.last_name,
         phone=current_user.phone,
+        date_of_birth=current_user.date_of_birth,
+        newsletter_opt_in=current_user.newsletter_opt_in,
+        whatsapp_opt_in=current_user.whatsapp_opt_in,
+        whatsapp_channel_opt_in=current_user.whatsapp_channel_opt_in,
+        onboarding_completed=current_user.onboarding_completed,
         role=current_user.role.value,
         is_active=current_user.is_active,
         email_verified=current_user.email_verified,

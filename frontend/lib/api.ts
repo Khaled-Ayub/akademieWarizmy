@@ -270,6 +270,11 @@ export const usersApi = {
     address_city?: string;
     address_zip?: string;
     address_country?: string;
+    date_of_birth?: string; // YYYY-MM-DD
+    newsletter_opt_in?: boolean;
+    whatsapp_opt_in?: boolean;
+    whatsapp_channel_opt_in?: boolean;
+    onboarding_completed?: boolean;
   }) => {
     const response = await api.put('/users/me', data);
     return response.data;

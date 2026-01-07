@@ -16,6 +16,11 @@ export interface User {
   first_name: string;
   last_name: string;
   phone?: string;
+  date_of_birth?: string | null;
+  newsletter_opt_in?: boolean;
+  whatsapp_opt_in?: boolean;
+  whatsapp_channel_opt_in?: boolean;
+  onboarding_completed?: boolean;
   role: 'student' | 'teacher' | 'admin';
   is_active: boolean;
   email_verified: boolean;

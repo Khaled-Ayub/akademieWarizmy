@@ -301,10 +301,21 @@ export default function PortalLayout({
       const isValid = await checkAuth();
       if (!isValid) {
         router.push('/login');
+        return;
+      }
+
+      // Force student onboarding if profile not completed
+      const u = useAuthStore.getState().user;
+      if (
+        u?.role === 'student' &&
+        !u?.onboarding_completed &&
+        !pathname.startsWith('/onboarding')
+      ) {
+        router.replace(`/onboarding?next=${encodeURIComponent(pathname)}`);
       }
     };
     verify();
-  }, [checkAuth, router]);
+  }, [checkAuth, pathname, router]);
 
   // Demo-Modus: Wenn nicht authentifiziert, Mock-User verwenden
   const displayUser = user || {

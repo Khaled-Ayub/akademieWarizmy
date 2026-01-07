@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from datetime import datetime, date
 
 from app.db.session import get_db
 from app.models import (
@@ -37,6 +37,11 @@ class UserUpdate(BaseModel):
     address_city: Optional[str] = None
     address_zip: Optional[str] = None
     address_country: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    newsletter_opt_in: Optional[bool] = None
+    whatsapp_opt_in: Optional[bool] = None
+    whatsapp_channel_opt_in: Optional[bool] = None
+    onboarding_completed: Optional[bool] = None
 
 
 class UserProfile(BaseModel):
@@ -50,6 +55,11 @@ class UserProfile(BaseModel):
     address_city: Optional[str]
     address_zip: Optional[str]
     address_country: Optional[str]
+    date_of_birth: Optional[date] = None
+    newsletter_opt_in: bool = False
+    whatsapp_opt_in: bool = False
+    whatsapp_channel_opt_in: bool = False
+    onboarding_completed: bool = False
     role: str
     email_verified: bool
     created_at: datetime
@@ -144,6 +154,11 @@ async def get_my_profile(current_user: User = Depends(get_current_user)):
         address_city=current_user.address_city,
         address_zip=current_user.address_zip,
         address_country=current_user.address_country,
+        date_of_birth=current_user.date_of_birth,
+        newsletter_opt_in=current_user.newsletter_opt_in,
+        whatsapp_opt_in=current_user.whatsapp_opt_in,
+        whatsapp_channel_opt_in=current_user.whatsapp_channel_opt_in,
+        onboarding_completed=current_user.onboarding_completed,
         role=current_user.role.value,
         email_verified=current_user.email_verified,
         created_at=current_user.created_at,
@@ -164,6 +179,16 @@ async def update_my_profile(
     
     for field, value in update_data.items():
         setattr(current_user, field, value)
+
+    # Convenience: Wenn Onboarding-Felder gesetzt werden, markiere als abgeschlossen
+    onboarding_fields = {
+        "date_of_birth",
+        "newsletter_opt_in",
+        "whatsapp_opt_in",
+        "whatsapp_channel_opt_in",
+    }
+    if any(f in update_data for f in onboarding_fields):
+        current_user.onboarding_completed = True
     
     await db.commit()
     await db.refresh(current_user)
@@ -178,6 +203,11 @@ async def update_my_profile(
         address_city=current_user.address_city,
         address_zip=current_user.address_zip,
         address_country=current_user.address_country,
+        date_of_birth=current_user.date_of_birth,
+        newsletter_opt_in=current_user.newsletter_opt_in,
+        whatsapp_opt_in=current_user.whatsapp_opt_in,
+        whatsapp_channel_opt_in=current_user.whatsapp_channel_opt_in,
+        onboarding_completed=current_user.onboarding_completed,
         role=current_user.role.value,
         email_verified=current_user.email_verified,
         created_at=current_user.created_at,

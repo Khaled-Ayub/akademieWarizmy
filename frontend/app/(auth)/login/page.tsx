@@ -5,7 +5,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,7 +34,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 // =========================================
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuthStore();
+  const searchParams = useSearchParams();
+  const { login, isLoading, user } = useAuthStore();
   
   // State
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +56,16 @@ export default function LoginPage() {
     
     try {
       await login(data.email, data.password);
-      router.push('/dashboard');
+      const next = searchParams.get('next');
+      const safeNext =
+        next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+      // If student hasn't completed onboarding, force onboarding first.
+      const u = useAuthStore.getState().user;
+      if (u?.role === 'student' && !u?.onboarding_completed) {
+        router.push(`/onboarding?next=${encodeURIComponent(safeNext)}`);
+        return;
+      }
+      router.push(safeNext);
     } catch (err) {
       setError(getErrorMessage(err));
     }

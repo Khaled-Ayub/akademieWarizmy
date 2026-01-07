@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   BookOpen, 
   LayoutDashboard,
@@ -21,8 +21,9 @@ import {
   ChevronRight,
   MapPin
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ToastProvider } from '@/components/Toast';
+import { selectIsAdmin, selectIsAuthenticated, useAuthStore } from '@/stores/authStore';
 
 // =========================================
 // Navigation Items (Hauptmenü)
@@ -226,6 +227,47 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const router = useRouter();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const isAdmin = useAuthStore(selectIsAdmin);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await checkAuth();
+      } finally {
+        if (!cancelled) setAuthReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkAuth]);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    // Middleware already blocks unauthenticated direct requests, but this prevents UI flicker
+    // and also blocks non-admin users.
+    if (!isAuthenticated) {
+      router.replace('/login?next=/admin');
+      return;
+    }
+    if (!isAdmin) {
+      router.replace('/dashboard');
+    }
+  }, [authReady, isAuthenticated, isAdmin, router]);
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">Laden...</div>
+      </div>
+    );
+  }
 
   return (
     <ToastProvider>

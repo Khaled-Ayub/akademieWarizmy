@@ -9,6 +9,7 @@ from typing import AsyncGenerator
 
 from app.core.config import get_settings
 from app.db.base import Base
+from sqlalchemy import text
 
 # Settings laden
 settings = get_settings()
@@ -85,6 +86,17 @@ async def init_db():
     async with engine.begin() as conn:
         # Alle Tabellen erstellen (nur wenn nicht vorhanden)
         await conn.run_sync(Base.metadata.create_all)
+
+        # -------------------------------------------------------------------
+        # Minimal "auto migrations" (idempotent)
+        # Since this repo currently doesn't ship Alembic migrations, we apply
+        # additive schema changes here so existing Railway DBs get new columns.
+        # -------------------------------------------------------------------
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth date"))
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS newsletter_opt_in boolean NOT NULL DEFAULT false"))
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_opt_in boolean NOT NULL DEFAULT false"))
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_channel_opt_in boolean NOT NULL DEFAULT false"))
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed boolean NOT NULL DEFAULT false"))
 
 
 async def close_db():

@@ -5,7 +5,7 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, String, Boolean, DateTime, Enum, Date
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import enum
@@ -96,6 +96,39 @@ class User(Base):
         String(100), 
         default="Deutschland",
         comment="Land"
+    )
+
+    # =========================================
+    # Onboarding / zusätzliche Profilfelder
+    # =========================================
+    date_of_birth = Column(
+        Date,
+        nullable=True,
+        comment="Geburtsdatum"
+    )
+    newsletter_opt_in = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Newsletter erhalten?"
+    )
+    whatsapp_opt_in = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="WhatsApp Updates erhalten?"
+    )
+    whatsapp_channel_opt_in = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="WhatsApp Channel beitreten?"
+    )
+    onboarding_completed = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Onboarding/Profil vollständig?"
     )
     
     # =========================================
