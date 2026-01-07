@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // FastAPI URL für Server-Side
-const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'https://acbackend.warizmyacademy.de/api';
 
 /**
  * GET /api/schedules
@@ -33,14 +33,17 @@ export async function GET(request: NextRequest) {
     const queryString = queryParams.toString();
     const url = `${API_URL}/sessions/public${queryString ? `?${queryString}` : ''}`;
 
+    console.log('Fetching schedules from:', url);
+    
     // FastAPI aufrufen
     const res = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
       },
-      // Cache für 5 Minuten
-      next: { revalidate: 300 },
+      cache: 'no-store',
     });
+    
+    console.log('Response status:', res.status);
 
     if (!res.ok) {
       // Falls Endpoint nicht existiert
@@ -55,7 +58,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: Array.isArray(data) ? data : [] });
   } catch (error) {
     console.error('Schedules API Error:', error);
-    // Leeres Array zurückgeben, falls Fehler
-    return NextResponse.json({ data: [] });
+    // Leeres Array zurückgeben mit Fehlerinfo
+    return NextResponse.json({ 
+      data: [], 
+      error: String(error),
+      apiUrl: API_URL 
+    });
   }
 }
