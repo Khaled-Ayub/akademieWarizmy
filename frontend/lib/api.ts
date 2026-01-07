@@ -9,7 +9,14 @@ import Cookies from 'js-cookie';
 // =========================================
 // Konfiguration
 // =========================================
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+function normalizeApiUrl(url: string): string {
+  // Accept both ".../api" and "..." and normalize to ".../api" (no trailing slash).
+  const trimmed = url.replace(/\/+$/, '');
+  if (trimmed.endsWith('/api')) return trimmed;
+  return `${trimmed}/api`;
+}
+
+const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
 
 // =========================================
 // Token Management
@@ -120,12 +127,14 @@ api.interceptors.response.use(
       const refreshToken = getRefreshToken();
       if (refreshToken) {
         try {
-          // Token erneuern
-          const response = await axios.post(`${API_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
-          });
-          
-          const { access_token, refresh_token } = response.data;
+          // Token erneuern via same-origin proxy (avoids CORS/baseURL issues)
+          const res = await fetch('/api/auth/refresh', { method: 'POST' });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(json?.detail || 'Refresh failed');
+          }
+
+          const { access_token, refresh_token } = json;
           
           // Neue Tokens speichern
           setAccessToken(access_token);
@@ -180,26 +189,35 @@ export const authApi = {
     last_name: string;
     phone?: string;
   }) => {
-    const response = await api.post('/auth/register', data);
-    return response.data;
+    // Use same-origin proxy to avoid CORS / misconfigured base URL issues
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // Normalize error shape for callers
+      throw new Error(json?.detail || json?.error || 'Registrierung fehlgeschlagen');
+    }
+    return json;
   },
 
   /**
    * Benutzer anmelden
    */
   login: async (email: string, password: string) => {
-    // OAuth2 Password Flow erwartet Form-Daten
-    const formData = new URLSearchParams();
-    formData.append('username', email);
-    formData.append('password', password);
-    
-    const response = await api.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
-    
-    const { access_token, refresh_token, user } = response.data;
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json?.detail || json?.error || 'Login fehlgeschlagen');
+    }
+
+    const { access_token, refresh_token, user } = json;
     
     // Tokens speichern
     setAccessToken(access_token);
@@ -212,19 +230,20 @@ export const authApi = {
    * Benutzer abmelden
    */
   logout: async () => {
-    try {
-      await api.post('/auth/logout');
-    } finally {
-      clearTokens();
-    }
+    // Backend currently doesn't expose /auth/logout; just clear local tokens.
+    clearTokens();
   },
 
   /**
    * Aktuellen Benutzer abrufen
    */
   getMe: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
+    const res = await fetch('/api/auth/me');
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json?.detail || 'Not authenticated');
+    }
+    return json;
   },
 
   /**
