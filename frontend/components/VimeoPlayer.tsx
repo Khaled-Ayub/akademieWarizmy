@@ -54,25 +54,58 @@ interface VimeoOembedData {
 
 /**
  * Extrahiert die Vimeo Video-ID aus verschiedenen URL-Formaten
- * Unterstützt: vimeo.com/123456789, player.vimeo.com/video/123456789
+ * Unterstützt viele Formate:
+ * - vimeo.com/123456789
+ * - player.vimeo.com/video/123456789
+ * - vimeo.com/123456789/abcdef (privat)
+ * - vimeo.com/manage/videos/123456789
+ * - vimeo.com/channels/xxx/123456789
+ * - vimeo.com/groups/xxx/videos/123456789
+ * - vimeo.com/album/xxx/video/123456789
+ * - vimeo.com/showcase/xxx/video/123456789
  */
 function extractVimeoId(input: string): string | null {
+  if (!input || typeof input !== 'string') return null;
+  
+  // Trim whitespace
+  input = input.trim();
+  
   // Falls es bereits eine reine ID ist (nur Zahlen)
   if (/^\d+$/.test(input)) {
     return input;
   }
   
-  // Standard Vimeo URL: vimeo.com/123456789
-  const standardMatch = input.match(/vimeo\.com\/(\d+)/);
-  if (standardMatch) return standardMatch[1];
+  // Manage URL: vimeo.com/manage/videos/123456789
+  const manageMatch = input.match(/vimeo\.com\/manage\/videos\/(\d+)/);
+  if (manageMatch) return manageMatch[1];
   
   // Player URL: player.vimeo.com/video/123456789
   const playerMatch = input.match(/player\.vimeo\.com\/video\/(\d+)/);
   if (playerMatch) return playerMatch[1];
   
+  // Channels: vimeo.com/channels/xxx/123456789
+  const channelMatch = input.match(/vimeo\.com\/channels\/[^\/]+\/(\d+)/);
+  if (channelMatch) return channelMatch[1];
+  
+  // Groups: vimeo.com/groups/xxx/videos/123456789
+  const groupMatch = input.match(/vimeo\.com\/groups\/[^\/]+\/videos\/(\d+)/);
+  if (groupMatch) return groupMatch[1];
+  
+  // Album/Showcase: vimeo.com/album/xxx/video/123456789 or vimeo.com/showcase/xxx/video/123456789
+  const albumMatch = input.match(/vimeo\.com\/(?:album|showcase)\/[^\/]+\/video\/(\d+)/);
+  if (albumMatch) return albumMatch[1];
+  
   // Privates Video mit Hash: vimeo.com/123456789/abcdef
   const privateMatch = input.match(/vimeo\.com\/(\d+)\/([a-zA-Z0-9]+)/);
   if (privateMatch) return privateMatch[1];
+  
+  // Standard Vimeo URL: vimeo.com/123456789 (muss nach privatem Match kommen!)
+  const standardMatch = input.match(/vimeo\.com\/(\d+)/);
+  if (standardMatch) return standardMatch[1];
+  
+  // Fallback: Versuche irgendeine Zahl zu finden die wie eine Vimeo-ID aussieht (8-12 Stellen)
+  const fallbackMatch = input.match(/(\d{7,12})/);
+  if (fallbackMatch) return fallbackMatch[1];
   
   return null;
 }

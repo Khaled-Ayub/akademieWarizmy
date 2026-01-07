@@ -109,6 +109,9 @@ import { Video, FileText, File, Layers, Upload, Calendar, BookOpen } from 'lucid
 // Tiptap Editor
 import TiptapEditor from '@/components/TiptapEditor';
 
+// Vimeo Player für Vorschau
+import VimeoPlayer from '@/components/VimeoPlayer';
+
 const CONTENT_TYPES = [
   { value: 'video', label: 'Video', icon: Video, description: 'Video-Lektion (Vimeo)' },
   { value: 'text', label: 'Text', icon: FileText, description: 'Formatierter Text-Inhalt' },
@@ -839,6 +842,22 @@ function LessonModal({
                     placeholder="https://vimeo.com/123456789"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
+                  <p className="text-xs text-blue-600">
+                    Unterstützte Formate: vimeo.com/123, player.vimeo.com/video/123, vimeo.com/manage/videos/123
+                  </p>
+                  {/* Video-Vorschau */}
+                  {formData.vimeo_video_url && (
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-600 mb-2">📺 Video-Vorschau:</p>
+                      <div className="rounded-lg overflow-hidden border border-blue-200">
+                        <VimeoPlayer 
+                          videoUrl={formData.vimeo_video_url}
+                          title="Vorschau"
+                          className="max-h-[250px]"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-3">
                     <div className="flex-1">
                       <label className="block text-xs text-gray-600 mb-1">Dauer (Minuten)</label>
@@ -1360,6 +1379,22 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
                 placeholder="https://vimeo.com/123456789"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Unterstützte Formate: vimeo.com/123, player.vimeo.com/video/123, vimeo.com/manage/videos/123
+              </p>
+              {/* Video-Vorschau für Kurs */}
+              {formData.preview_video_url && (
+                <div className="mt-3">
+                  <p className="text-xs text-gray-600 mb-2">📺 Video-Vorschau:</p>
+                  <div className="rounded-lg overflow-hidden border border-gray-200">
+                    <VimeoPlayer 
+                      videoUrl={formData.preview_video_url}
+                      title="Kurs-Vorschau"
+                      className="max-h-[200px]"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Kursbild (Thumbnail) */}
