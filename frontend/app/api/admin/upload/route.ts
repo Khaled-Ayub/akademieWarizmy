@@ -4,12 +4,29 @@
 // Lädt Dateien zu MinIO hoch via FastAPI Backend
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 // Backend URL für Server-seitige Calls
 // Priorität: API_INTERNAL_URL > NEXT_PUBLIC_API_URL > localhost (dev only)
 const API_URL = process.env.API_INTERNAL_URL 
   || process.env.NEXT_PUBLIC_API_URL 
   || 'http://localhost:8000/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,9 +59,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`Uploading to: ${API_URL}${endpoint}`);
 
+    const authHeaders = await getAuthHeaders();
     // An FastAPI Backend senden
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
+      headers: {
+        ...authHeaders,
+      },
       body: apiFormData,
     });
 

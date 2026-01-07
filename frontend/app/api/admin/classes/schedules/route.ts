@@ -3,17 +3,38 @@
 // ===========================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 // POST - Schedule zu einer Klasse hinzufügen
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/classes/${body.class_id}/schedules`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify(body),
     });
 

@@ -4,8 +4,25 @@
 // Proxy für FastAPI Backend mit Server-seitigem Token
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 // GET - Alle Kurse abrufen (Admin: inkl. nicht veröffentlichte)
 export async function GET(request: NextRequest) {
@@ -15,10 +32,11 @@ export async function GET(request: NextRequest) {
     
     console.log('Fetching courses from:', apiUrl);
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(apiUrl, {
       headers: {
         'Content-Type': 'application/json',
-        // TODO: Auth-Token hinzufügen wenn implementiert
+        ...authHeaders,
       },
       cache: 'no-store',
     });
@@ -48,11 +66,12 @@ export async function POST(request: NextRequest) {
     // Unterstütze sowohl { data: ... } als auch direkte Daten
     const courseData = body.data || body;
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/courses`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // TODO: Auth-Token hinzufügen wenn implementiert
+        ...authHeaders,
       },
       body: JSON.stringify(courseData),
     });

@@ -3,10 +3,27 @@
 // ===========================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'https://acbackend.warizmyacademy.de/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 // GET - Alle Benutzer abrufen
 export async function GET(request: NextRequest) {
@@ -21,8 +38,12 @@ export async function GET(request: NextRequest) {
     if (search) params.append('search', search);
     if (params.toString()) url += `?${params.toString()}`;
 
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       cache: 'no-store',
     });
 
@@ -47,9 +68,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/admin/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify(body),
     });
 

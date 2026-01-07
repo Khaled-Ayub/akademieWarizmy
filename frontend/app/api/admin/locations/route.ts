@@ -3,14 +3,35 @@
 // ===========================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'https://acbackend.warizmyacademy.de/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 // GET - Alle Standorte abrufen
 export async function GET(request: NextRequest) {
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/locations?active_only=false`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
     });
 
     if (!res.ok) {
@@ -34,9 +55,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/locations`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify(body),
     });
 

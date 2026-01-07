@@ -3,8 +3,25 @@
 // ===========================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 // GET - Einzelnen Kurs abrufen (Admin-Route für alle Kurse inkl. nicht veröffentlichte)
 export async function GET(
@@ -12,12 +29,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(
       `${API_URL}/courses/admin/${params.id}`,
       {
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Auth-Token hinzufügen wenn implementiert
+          ...authHeaders,
         },
         cache: 'no-store',
       }
@@ -51,11 +69,12 @@ export async function PUT(
     // Unterstütze sowohl { data: ... } als auch direkte Daten
     const courseData = body.data || body;
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/courses/${params.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        // TODO: Auth-Token hinzufügen wenn implementiert
+        ...authHeaders,
       },
       body: JSON.stringify(courseData),
     });
@@ -82,10 +101,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/courses/${params.id}`, {
       method: 'DELETE',
       headers: {
-        // TODO: Auth-Token hinzufügen wenn implementiert
+        ...authHeaders,
       },
     });
 

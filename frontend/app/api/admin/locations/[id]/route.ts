@@ -3,8 +3,25 @@
 // ===========================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+/**
+ * Helper: Authorization Header aus Cookies erstellen
+ */
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('warizmy_access_token')?.value;
+  
+  if (!token) {
+    return {};
+  }
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 // GET - Einzelnen Standort abrufen
 export async function GET(
@@ -12,8 +29,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/locations/${params.id}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
     });
 
     if (!res.ok) {
@@ -40,9 +61,13 @@ export async function PUT(
   try {
     const body = await request.json();
     
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/locations/${params.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify(body),
     });
 
@@ -74,8 +99,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(`${API_URL}/locations/${params.id}`, {
       method: 'DELETE',
+      headers: {
+        ...authHeaders,
+      },
     });
 
     if (!res.ok) {
