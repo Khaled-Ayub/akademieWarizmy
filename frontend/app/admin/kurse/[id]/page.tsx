@@ -25,6 +25,9 @@ import {
   ImagePlus
 } from 'lucide-react';
 
+// Toast für Benachrichtigungen
+import { useToast } from '@/components/Toast';
+
 // KI-Generierung Hook
 function useAIGenerate() {
   const [generating, setGenerating] = useState<string | null>(null);
@@ -621,7 +624,10 @@ function LessonModal({
   nextOrder: number;
   courseTitle: string;
 }) {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'content' | 'homework'>('content');
+  // Track ob der Slug manuell geändert wurde
+  const [slugManuallyChanged, setSlugManuallyChanged] = useState(!!lesson?.slug);
   const [formData, setFormData] = useState({
     title: lesson?.title || '',
     slug: lesson?.slug || '',
@@ -654,8 +660,27 @@ function LessonModal({
       .replace(/(^-|-$)/g, '');
   };
 
+  // Titel ändern und Slug automatisch generieren (wenn nicht manuell geändert)
+  const handleTitleChange = (newTitle: string) => {
+    setFormData(prev => ({
+      ...prev,
+      title: newTitle,
+      // Slug nur auto-generieren, wenn nicht manuell geändert
+      slug: slugManuallyChanged ? prev.slug : generateSlug(newTitle)
+    }));
+  };
+
+  // Slug manuell ändern
+  const handleSlugChange = (newSlug: string) => {
+    setSlugManuallyChanged(true);
+    setFormData(prev => ({ ...prev, slug: newSlug }));
+  };
+
   const handleSave = async () => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim()) {
+      toast.error('Bitte gib einen Titel ein');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -672,14 +697,18 @@ function LessonModal({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        if (!res.ok) throw new Error('Fehler beim Speichern');
         result = await res.json();
+        toast.success('✅ Lektion erfolgreich aktualisiert!');
       } else {
         const res = await fetch('/api/admin/lessons', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        if (!res.ok) throw new Error('Fehler beim Erstellen');
         result = await res.json();
+        toast.success('✅ Lektion erfolgreich erstellt!');
       }
 
       // Hausaufgaben speichern (TODO: Backend-Integration)
@@ -688,6 +717,7 @@ function LessonModal({
       onSave(result.data || result);
     } catch (err) {
       console.error('Error saving lesson:', err);
+      toast.error('❌ Fehler beim Speichern der Lektion');
     } finally {
       setSaving(false);
     }
@@ -756,11 +786,8 @@ function LessonModal({
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      title: e.target.value,
-                      slug: prev.slug || generateSlug(e.target.value)
-                    }))}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    placeholder="z.B. Einführung in das arabische Alphabet"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
@@ -769,9 +796,13 @@ function LessonModal({
                   <input
                     type="text"
                     value={formData.slug}
-                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                    onChange={(e) => handleSlugChange(e.target.value)}
+                    placeholder="wird automatisch generiert"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {slugManuallyChanged ? '✏️ Manuell angepasst' : '🔄 Automatisch vom Titel'}
+                  </p>
                 </div>
               </div>
 
@@ -1078,6 +1109,7 @@ function LessonRow({
 // =========================================
 export default function KursEditorPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const toast = useToast();
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1088,6 +1120,9 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
 
   // Thumbnail State
   const [thumbnail, setThumbnail] = useState<{ url: string } | null>(null);
+  
+  // Track ob der Slug manuell geändert wurde
+  const [courseSlugManuallyChanged, setCourseSlugManuallyChanged] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -1105,6 +1140,33 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
     is_featured: false,
     is_published: false,
   });
+  
+  // Slug generieren Funktion
+  const generateCourseSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[äÄ]/g, 'ae')
+      .replace(/[öÖ]/g, 'oe')
+      .replace(/[üÜ]/g, 'ue')
+      .replace(/ß/g, 'ss')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  // Kurs-Titel ändern und Slug automatisch generieren
+  const handleCourseTitleChange = (newTitle: string) => {
+    setFormData(prev => ({
+      ...prev,
+      title: newTitle,
+      slug: courseSlugManuallyChanged ? prev.slug : generateCourseSlug(newTitle)
+    }));
+  };
+
+  // Kurs-Slug manuell ändern
+  const handleCourseSlugChange = (newSlug: string) => {
+    setCourseSlugManuallyChanged(true);
+    setFormData(prev => ({ ...prev, slug: newSlug }));
+  };
 
   // Bild hochladen
   const handleImageUpload = async (file: File) => {
@@ -1165,6 +1227,10 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
         
         if (courseData && courseData.id) {
           setCourse(courseData);
+          // Wenn Kurs bereits einen Slug hat, als manuell geändert markieren
+          if (courseData.slug) {
+            setCourseSlugManuallyChanged(true);
+          }
           setFormData({
             title: courseData.title || '',
             slug: courseData.slug || '',
@@ -1207,13 +1273,19 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
 
   // Kurs speichern (über lokale API-Route)
   const handleSave = async () => {
+    if (!formData.title.trim()) {
+      toast.error('Bitte gib einen Kurs-Titel ein');
+      return;
+    }
+    
     setSaving(true);
     setError(null);
 
     try {
-      // Daten mit Thumbnail-URL zusammenstellen
+      // Daten mit Thumbnail-URL und generiertem Slug zusammenstellen
       const courseData = {
         ...formData,
+        slug: formData.slug || generateCourseSlug(formData.title),
         thumbnail_url: thumbnail?.url || null,
       };
 
@@ -1226,8 +1298,10 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
       if (!res.ok) throw new Error('Fehler beim Speichern');
       
       setError(null);
+      toast.success('✅ Kurs erfolgreich gespeichert!');
     } catch (err: any) {
       setError(err.message);
+      toast.error('❌ Fehler beim Speichern des Kurses');
     } finally {
       setSaving(false);
     }
@@ -1341,23 +1415,28 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
             <h2 className="text-lg font-semibold text-gray-900">Kursdaten</h2>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
               <input
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => handleCourseTitleChange(e.target.value)}
+                placeholder="z.B. Arabisch für Anfänger"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">URL-Slug</label>
               <input
                 type="text"
                 value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                onChange={(e) => handleCourseSlugChange(e.target.value)}
+                placeholder="wird automatisch generiert"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {courseSlugManuallyChanged ? '✏️ Manuell angepasst' : '🔄 Automatisch vom Titel'}
+              </p>
             </div>
 
             <div>
