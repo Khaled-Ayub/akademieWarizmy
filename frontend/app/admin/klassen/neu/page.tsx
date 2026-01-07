@@ -375,17 +375,28 @@ export default function NeueKlassePage() {
 
     try {
       // 1. Klasse erstellen
+      const payload = {
+        name: formData.name,
+        description: formData.description || null,
+        course_id: formData.course_id,
+        start_date: formData.start_date,
+        end_date: formData.end_date || null,
+        max_students: formData.max_students ? parseInt(formData.max_students) : null,
+        is_active: formData.is_active,
+      };
+      
+      console.log('Creating class with payload:', payload);
+      
       const classRes = await fetch('/api/admin/classes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          max_students: formData.max_students ? parseInt(formData.max_students) : null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!classRes.ok) {
-        throw new Error('Fehler beim Erstellen der Klasse');
+        const errorData = await classRes.json().catch(() => ({}));
+        console.error('Backend error:', errorData);
+        throw new Error(errorData.detail || errorData.error || 'Fehler beim Erstellen der Klasse');
       }
 
       const classData = await classRes.json();

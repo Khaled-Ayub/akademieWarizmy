@@ -167,16 +167,32 @@ async def create_class(
     Neue Klasse erstellen.
     """
     from uuid import UUID
+    from app.models import Course
     
-    new_class = Class(
-        course_id=UUID(class_data.course_id),
-        name=class_data.name,
-        description=class_data.description,
-        start_date=class_data.start_date,
-        end_date=class_data.end_date,
-        max_students=class_data.max_students,
-        is_active=class_data.is_active,
-    )
+    # Prüfen ob Kurs existiert
+    result = await db.execute(select(Course).where(Course.id == class_data.course_id))
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Kurs mit ID {class_data.course_id} nicht gefunden"
+        )
+    
+    try:
+        new_class = Class(
+            course_id=UUID(class_data.course_id),
+            name=class_data.name,
+            description=class_data.description,
+            start_date=class_data.start_date,
+            end_date=class_data.end_date,
+            max_students=class_data.max_students,
+            is_active=class_data.is_active,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ungültige Daten: {str(e)}"
+        )
     
     db.add(new_class)
     await db.commit()
