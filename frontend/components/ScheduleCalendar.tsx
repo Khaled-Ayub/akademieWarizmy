@@ -173,148 +173,105 @@ function getTypeLabel(type: string): { label: string; icon: typeof Video } {
 // ===========================================
 
 /**
- * Einzelner Termin-Eintrag - Modernes Card-Design
+ * Einzelner Termin-Eintrag - Clean Minimal Design
  */
 function ScheduleItem({ schedule }: { schedule: Schedule }) {
   const typeInfo = getTypeLabel(schedule.type);
   const TypeIcon = typeInfo.icon;
-  
-  // Dynamische Farben basierend auf Kurstyp
-  const getGradient = () => {
-    if (schedule.title.toLowerCase().includes('arabisch') || schedule.title.toLowerCase().includes('a1') || schedule.title.toLowerCase().includes('a2')) {
-      return 'from-emerald-500 to-teal-600';
-    }
-    if (schedule.title.toLowerCase().includes('islam') || schedule.title.toLowerCase().includes('quran')) {
-      return 'from-amber-500 to-orange-600';
-    }
-    return 'from-primary-500 to-primary-600';
-  };
+  const isLive = schedule.type === 'online';
   
   return (
-    <div className="group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
-      {/* Gradient Accent Bar */}
-      <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${getGradient()}`} />
-      
-      <div className="p-5">
-        {/* Header mit Zeit-Badge und Typ */}
-        <div className="flex items-start justify-between mb-4">
-          {/* Zeit-Badge */}
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r ${getGradient()} text-white text-sm font-semibold shadow-sm`}>
-            <Clock className="w-4 h-4" />
-            {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-          </div>
-          
-          {/* Typ-Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
-            <TypeIcon className="w-3.5 h-3.5" />
-            {typeInfo.label}
-          </div>
-        </div>
-        
-        {/* Klassen-Titel */}
-        <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
-          {schedule.title}
-        </h4>
-        
-        {/* Kurs-Info Card */}
-        {schedule.course && (
-          <Link 
-            href={`/kurse/${schedule.course.slug}`}
-            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-primary-50 transition-colors mb-3 group/link"
-          >
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getGradient()} flex items-center justify-center shadow-sm`}>
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 group-hover/link:text-primary-600 truncate">
-                {schedule.course.title}
-              </p>
-              <p className="text-xs text-gray-500">Zum Kurs →</p>
-            </div>
-          </Link>
-        )}
-        
-        {/* Footer mit zusätzlichen Infos */}
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          {/* Lehrer */}
-          {schedule.teacher && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                <Users className="w-3.5 h-3.5 text-gray-500" />
-              </div>
-              <span>{schedule.teacher.name}</span>
-            </div>
-          )}
-          
-          {/* Ort */}
-          {schedule.location && schedule.type !== 'online' && (
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-gray-400" />
-              <span>{schedule.location}</span>
-            </div>
-          )}
-          
-          {/* Online-Badge */}
-          {schedule.type === 'online' && (
-            <div className="flex items-center gap-1.5 text-emerald-600">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-medium">Live Online</span>
-            </div>
-          )}
-        </div>
+    <Link 
+      href={schedule.course ? `/kurse/${schedule.course.slug}` : '#'}
+      className="group flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-primary-200 hover:bg-primary-50/30 transition-all duration-200"
+    >
+      {/* Zeit-Block */}
+      <div className="flex-shrink-0 text-center w-14">
+        <p className="text-lg font-bold text-gray-900">{formatTime(schedule.start_time)}</p>
+        <p className="text-[10px] text-gray-400 uppercase tracking-wider">Uhr</p>
       </div>
-    </div>
+      
+      {/* Vertikale Linie mit Live-Indikator */}
+      <div className="relative flex-shrink-0 w-px h-12 bg-gray-200">
+        {isLive && (
+          <>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-emerald-500 rounded-full" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
+          </>
+        )}
+        {!isLive && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-300 rounded-full" />
+        )}
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <h4 className="font-semibold text-gray-900 truncate group-hover:text-primary-600 transition-colors">
+            {schedule.title}
+          </h4>
+          {isLive && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded tracking-wider">
+              <Video className="w-3 h-3" />
+              Live
+            </span>
+          )}
+        </div>
+        {schedule.course && (
+          <p className="text-sm text-gray-500 truncate">{schedule.course.title}</p>
+        )}
+      </div>
+      
+      {/* Dauer */}
+      <div className="flex-shrink-0 text-right">
+        <p className="text-xs text-gray-400">
+          {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+        </p>
+        {schedule.location && schedule.type !== 'online' && (
+          <p className="text-xs text-gray-400 flex items-center gap-1 justify-end mt-0.5">
+            <MapPin className="w-3 h-3" />
+            {schedule.location}
+          </p>
+        )}
+      </div>
+      
+      {/* Hover Arrow */}
+      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+    </Link>
   );
 }
 
 /**
- * Tagesgruppe mit Datum-Header und Terminen - Premium Design
+ * Tagesgruppe mit Datum-Header - Clean Minimal
  */
 function DayGroup({ date, schedules }: { date: string; schedules: Schedule[] }) {
   const isToday = date === new Date().toISOString().split('T')[0];
   const dateObj = new Date(date);
-  const weekday = dateObj.toLocaleDateString('de-DE', { weekday: 'long' });
-  const dayMonth = dateObj.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+  const weekday = dateObj.toLocaleDateString('de-DE', { weekday: 'short' });
+  const day = dateObj.getDate();
   
   return (
-    <div className="mb-8 last:mb-0">
-      {/* Datum-Header */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className={`relative flex flex-col items-center justify-center w-16 h-16 rounded-2xl shadow-sm ${
+    <div className="mb-6 last:mb-0">
+      {/* Kompakter Datum-Header */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
           isToday 
-            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white' 
-            : 'bg-white border border-gray-200 text-gray-700'
+            ? 'bg-primary-500 text-white' 
+            : 'bg-gray-100 text-gray-600'
         }`}>
+          <span>{weekday}</span>
+          <span className="font-bold">{day}</span>
           {isToday && (
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
           )}
-          <span className="text-2xl font-bold leading-none">
-            {dateObj.getDate()}
-          </span>
-          <span className={`text-[10px] uppercase tracking-wider font-medium ${isToday ? 'text-primary-100' : 'text-gray-400'}`}>
-            {dateObj.toLocaleDateString('de-DE', { month: 'short' })}
-          </span>
         </div>
-        
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className={`text-lg font-bold ${isToday ? 'text-primary-600' : 'text-gray-900'}`}>
-              {isToday ? '✨ Heute' : weekday}
-            </p>
-            {isToday && (
-              <span className="px-2 py-0.5 text-xs font-semibold bg-primary-100 text-primary-700 rounded-full">
-                Aktuell
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-gray-500">
-            {schedules.length} Unterricht{schedules.length !== 1 ? 'e' : ''} geplant
-          </p>
-        </div>
+        <span className="text-xs text-gray-400">
+          {schedules.length} {schedules.length === 1 ? 'Termin' : 'Termine'}
+        </span>
       </div>
       
-      {/* Termine Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+      {/* Termine Liste */}
+      <div className="space-y-2">
         {schedules.map(schedule => (
           <ScheduleItem key={schedule.id} schedule={schedule} />
         ))}
@@ -324,42 +281,26 @@ function DayGroup({ date, schedules }: { date: string; schedules: Schedule[] }) 
 }
 
 /**
- * Leerer Zustand - Premium Design
+ * Leerer Zustand - Minimal
  */
 function EmptyState({ view }: { view: ViewType }) {
-  const messages: Record<ViewType, { title: string; subtitle: string }> = {
-    heute: { 
-      title: 'Heute keine Unterrichte', 
-      subtitle: 'Genieße deinen freien Tag! 🌟' 
-    },
-    woche: { 
-      title: 'Diese Woche keine Unterrichte', 
-      subtitle: 'Schau bald wieder vorbei für neue Termine.' 
-    },
-    monat: { 
-      title: 'Diesen Monat keine Unterrichte', 
-      subtitle: 'Neue Kurse starten bald!' 
-    },
+  const messages: Record<ViewType, string> = {
+    heute: 'Heute keine Termine',
+    woche: 'Diese Woche keine Termine',
+    monat: 'Keine Termine in diesem Monat',
   };
   
   return (
-    <div className="text-center py-16">
-      <div className="relative inline-block mb-6">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto">
-          <Calendar className="w-10 h-10 text-gray-400" />
-        </div>
-        <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center">
-          <span className="text-lg">📅</span>
-        </div>
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-3">
+        <Calendar className="w-6 h-6 text-gray-400" />
       </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">{messages[view].title}</h3>
-      <p className="text-gray-500 mb-6">{messages[view].subtitle}</p>
+      <p className="text-sm text-gray-500 mb-4">{messages[view]}</p>
       <Link 
         href="/kurse"
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-colors shadow-sm"
+        className="text-sm font-medium text-primary-600 hover:text-primary-700"
       >
-        <BookOpen className="w-4 h-4" />
-        Alle Kurse entdecken
+        Kurse entdecken →
       </Link>
     </div>
   );
@@ -422,15 +363,17 @@ export default function ScheduleCalendar() {
     { id: 'monat', label: 'Dieser Monat' },
   ];
   
-  // Skeleton während SSR um Hydration-Fehler zu vermeiden
+  // Skeleton während SSR
   if (!mounted) {
     return (
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gray-50/50">
         <div className="container-custom">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-64 mb-8"></div>
-            <div className="bg-gray-100 rounded-2xl p-6 h-[400px]"></div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gray-200 rounded-xl" />
+              <div className="h-6 bg-gray-200 rounded w-32" />
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 h-[300px]" />
           </div>
         </div>
       </section>
@@ -438,32 +381,30 @@ export default function ScheduleCalendar() {
   }
   
   return (
-    <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-16 bg-gray-50/50">
       <div className="container-custom">
-        {/* Header mit dekorativem Element */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg shadow-primary-500/25 mb-6">
-            <Calendar className="w-8 h-8 text-white" />
+        {/* Clean Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Stundenplan</h2>
+              <p className="text-sm text-gray-500">Kommende Unterrichte</p>
+            </div>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-            Unterrichtsplan
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Übersicht über alle anstehenden Unterrichte und Live-Sessions
-          </p>
-        </div>
-        
-        {/* Tab-Navigation - Premium */}
-        <div className="flex justify-center mb-10">
-          <div className="inline-flex gap-1 p-1.5 bg-white rounded-2xl shadow-sm border border-gray-200">
+          
+          {/* Kompakte Tab-Navigation */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setView(tab.id)}
-                className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                   view === tab.id
-                    ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/25'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 {tab.label}
@@ -472,59 +413,36 @@ export default function ScheduleCalendar() {
           </div>
         </div>
         
-        {/* Kalender-Inhalt */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 min-h-[400px]">
-          {/* Datum-Header für aktuelle Ansicht */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">
-                Zeitraum
-              </p>
-              <p className="text-lg font-semibold text-gray-900">
-                {view === 'heute' && formatFullDate(new Date().toISOString())}
-                {view === 'woche' && (() => {
-                  const { from, to } = getDateRange('woche');
-                  return `${formatDate(from)} - ${formatDate(to)}`;
-                })()}
-                {view === 'monat' && new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
-              </p>
-            </div>
-            <div>
-              {!loading && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-full border border-emerald-200">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-sm font-semibold text-emerald-700">
-                    {schedules.length} Termin{schedules.length !== 1 ? 'e' : ''}
-                  </span>
-                </div>
-              )}
-            </div>
+        {/* Clean Container */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 min-h-[300px]">
+          {/* Mini Header */}
+          <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+            <p className="text-sm text-gray-500">
+              {view === 'heute' && formatFullDate(new Date().toISOString())}
+              {view === 'woche' && (() => {
+                const { from, to } = getDateRange('woche');
+                return `${formatDate(from)} – ${formatDate(to)}`;
+              })()}
+              {view === 'monat' && new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+            </p>
+            {!loading && schedules.length > 0 && (
+              <span className="text-xs font-medium text-gray-400">
+                {schedules.length} {schedules.length === 1 ? 'Termin' : 'Termine'}
+              </span>
+            )}
           </div>
           
           {/* Loading State */}
           {loading && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="relative w-16 h-16">
-                <div className="absolute inset-0 rounded-full border-4 border-gray-100" />
-                <div className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin" />
-              </div>
-              <p className="mt-4 text-sm text-gray-500 font-medium">Lade Termine...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           
           {/* Error State */}
           {error && !loading && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">⚠️</span>
-              </div>
-              <p className="text-red-600 font-medium">{error}</p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Erneut versuchen →
-              </button>
+            <div className="text-center py-8">
+              <p className="text-sm text-red-500">{error}</p>
             </div>
           )}
           
@@ -543,20 +461,13 @@ export default function ScheduleCalendar() {
           )}
         </div>
         
-        {/* Footer CTA */}
-        <div className="text-center mt-10">
+        {/* Clean Footer Link */}
+        <div className="flex justify-center mt-5">
           <Link 
             href="/kurse" 
-            className="group inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl shadow-sm border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all"
+            className="text-sm font-medium text-gray-500 hover:text-primary-600 transition-colors"
           >
-            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-500 transition-colors">
-              <BookOpen className="w-5 h-5 text-primary-600 group-hover:text-white transition-colors" />
-            </div>
-            <div className="text-left">
-              <p className="font-semibold text-gray-900">Alle Kurse entdecken</p>
-              <p className="text-sm text-gray-500">Finde den passenden Kurs für dich</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+            Alle Kurse ansehen →
           </Link>
         </div>
       </div>
