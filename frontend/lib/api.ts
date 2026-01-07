@@ -17,15 +17,35 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const TOKEN_KEY = 'warizmy_access_token';
 const REFRESH_TOKEN_KEY = 'warizmy_refresh_token';
 
+function getCookieDomain(): string | undefined {
+  // Only needed in the browser. On the server we don't set cookies via js-cookie.
+  if (typeof window === 'undefined') return undefined;
+
+  const host = window.location.hostname;
+  // Make tokens available across subdomains in production (e.g. ac.warizmyacademy.de).
+  if (host === 'warizmyacademy.de' || host.endsWith('.warizmyacademy.de')) {
+    return '.warizmyacademy.de';
+  }
+
+  return undefined;
+}
+
+function getCookieOptions(expires: number) {
+  const domain = process.env.NODE_ENV === 'production' ? getCookieDomain() : undefined;
+  return {
+    expires,
+    path: '/',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    ...(domain ? { domain } : {}),
+  };
+}
+
 /**
  * Access Token speichern
  */
 export function setAccessToken(token: string): void {
-  Cookies.set(TOKEN_KEY, token, { 
-    expires: 1/48, // 30 Minuten
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
+  Cookies.set(TOKEN_KEY, token, getCookieOptions(1/48)); // 30 Minuten
 }
 
 /**
@@ -39,11 +59,7 @@ export function getAccessToken(): string | undefined {
  * Refresh Token speichern
  */
 export function setRefreshToken(token: string): void {
-  Cookies.set(REFRESH_TOKEN_KEY, token, { 
-    expires: 7, // 7 Tage
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
+  Cookies.set(REFRESH_TOKEN_KEY, token, getCookieOptions(7)); // 7 Tage
 }
 
 /**
@@ -57,8 +73,9 @@ export function getRefreshToken(): string | undefined {
  * Alle Tokens löschen (Logout)
  */
 export function clearTokens(): void {
-  Cookies.remove(TOKEN_KEY);
-  Cookies.remove(REFRESH_TOKEN_KEY);
+  // Use the same options as set(), otherwise cookies with a specific domain/path won't be removed.
+  Cookies.remove(TOKEN_KEY, getCookieOptions(1/48));
+  Cookies.remove(REFRESH_TOKEN_KEY, getCookieOptions(7));
 }
 
 // =========================================
