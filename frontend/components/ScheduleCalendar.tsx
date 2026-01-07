@@ -194,10 +194,12 @@ function ScheduleItem({ schedule }: { schedule: Schedule }) {
       {/* Vertikale Linie mit Live-Indikator */}
       <div className="relative flex-shrink-0 w-px h-12 bg-gray-200">
         {isLive && (
-          <>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-emerald-500 rounded-full" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
-          </>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            {/* Outer glow ring */}
+            <div className="absolute inset-0 w-4 h-4 -m-0.5 bg-emerald-400/30 rounded-full animate-[pulse_2s_ease-in-out_infinite]" />
+            {/* Inner dot */}
+            <div className="relative w-3 h-3 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+          </div>
         )}
         {!isLive && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-300 rounded-full" />
@@ -211,8 +213,11 @@ function ScheduleItem({ schedule }: { schedule: Schedule }) {
             {schedule.title}
           </h4>
           {isLive && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded tracking-wider">
-              <Video className="w-3 h-3" />
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold uppercase rounded-full tracking-wider shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-[ping_1.5s_ease-in-out_infinite] rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+              </span>
               Live
             </span>
           )}
