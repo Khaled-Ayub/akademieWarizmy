@@ -4,11 +4,19 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Save, Loader2, Sparkles, ImagePlus, X } from 'lucide-react';
+import { ChevronLeft, Save, Loader2, Sparkles, ImagePlus, X, MapPin } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+
+// Location Interface
+interface Location {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+}
 
 // KI-Generierung Hook
 function useAIGenerate() {
@@ -53,6 +61,10 @@ export default function NeuKursPage() {
   // Track ob Slug manuell bearbeitet wurde
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
+  // Locations State
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -68,7 +80,25 @@ export default function NeuKursPage() {
     is_active: false,
     is_featured: false,
     is_published: false,
+    default_location_id: '',
+    session_type: 'online',
   });
+
+  // Locations laden
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/admin/locations');
+        const data = await res.json();
+        setLocations(Array.isArray(data) ? data : data.items || data.data || []);
+      } catch (err) {
+        console.error('Error loading locations:', err);
+      } finally {
+        setLoadingLocations(false);
+      }
+    }
+    loadLocations();
+  }, []);
 
   // Bild hochladen
   const handleImageUpload = async (file: File) => {
@@ -165,6 +195,7 @@ export default function NeuKursPage() {
       const courseData = {
         ...formData,
         thumbnail_url: thumbnail?.url || null,
+        default_location_id: formData.default_location_id || null,
       };
 
       console.log('Sending course data:', courseData);
@@ -382,6 +413,50 @@ export default function NeuKursPage() {
                 <option value="course">Kurs</option>
                 <option value="seminar">Seminar</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-primary-500" />
+            Unterrichtsort
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unterrichtsart</label>
+              <select 
+                value={formData.session_type} 
+                onChange={(e) => setFormData(prev => ({ ...prev, session_type: e.target.value }))} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white"
+              >
+                <option value="online">🖥️ Online (Zoom)</option>
+                <option value="onsite">📍 Vor Ort</option>
+                <option value="hybrid">🔄 Hybrid (Online + Vor Ort)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Standort</label>
+              <select 
+                value={formData.default_location_id} 
+                onChange={(e) => setFormData(prev => ({ ...prev, default_location_id: e.target.value }))} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white"
+                disabled={loadingLocations || formData.session_type === 'online'}
+              >
+                <option value="">
+                  {formData.session_type === 'online' ? 'Nicht erforderlich (Online)' : 'Standort auswählen...'}
+                </option>
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name} - {loc.city}
+                  </option>
+                ))}
+              </select>
+              {formData.session_type !== 'online' && locations.length === 0 && !loadingLocations && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Keine Standorte vorhanden. <Link href="/admin/standorte/neu" className="underline">Standort erstellen →</Link>
+                </p>
+              )}
             </div>
           </div>
         </div>
