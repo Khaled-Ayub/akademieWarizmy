@@ -291,6 +291,7 @@ export default function PortalLayout({
   const { user, isAuthenticated, checkAuth } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
+  const [authReady, setAuthReady] = useState(false);
 
   // Navigation Items basierend auf Rolle
   const navItems = pathname.startsWith('/lehrer') ? teacherNavItems : studentNavItems;
@@ -304,30 +305,36 @@ export default function PortalLayout({
         return;
       }
 
-      // Force student onboarding if profile not completed
       const u = useAuthStore.getState().user;
-      if (
-        u?.role === 'student' &&
-        !u?.onboarding_completed &&
-        !pathname.startsWith('/onboarding')
-      ) {
-        router.replace(`/onboarding?next=${encodeURIComponent(pathname)}`);
+
+      // Role routing: teacher routes vs student routes
+      if (pathname.startsWith('/lehrer') && u?.role !== 'teacher') {
+        router.replace('/dashboard');
+        return;
       }
+      if (pathname.startsWith('/dashboard') && u?.role === 'teacher') {
+        router.replace('/lehrer/dashboard');
+        return;
+      }
+
+      // Force student onboarding if profile not completed
+      if (u?.role === 'student' && !u?.onboarding_completed) {
+        router.replace(`/onboarding?next=${encodeURIComponent(pathname)}`);
+        return;
+      }
+
+      setAuthReady(true);
     };
     verify();
   }, [checkAuth, pathname, router]);
 
-  // Demo-Modus: Wenn nicht authentifiziert, Mock-User verwenden
-  const displayUser = user || {
-    id: 'demo',
-    email: 'demo@warizmy.com',
-    first_name: 'Demo',
-    last_name: 'Benutzer',
-    role: pathname.startsWith('/lehrer') ? 'teacher' : 'student' as const,
-    is_active: true,
-    email_verified: true,
-    created_at: new Date().toISOString(),
-  };
+  if (!authReady || !isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Laden...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -335,7 +342,7 @@ export default function PortalLayout({
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)}
-        user={displayUser}
+        user={user}
         navItems={navItems}
       />
       
@@ -343,7 +350,7 @@ export default function PortalLayout({
       <div className="flex-1 flex flex-col min-h-screen">
         <Header 
           onMenuClick={() => setSidebarOpen(true)} 
-          user={displayUser}
+          user={user}
         />
         <main className="flex-1 p-4 lg:p-6">
           {children}

@@ -14,6 +14,18 @@ function buildLoginRedirect(request: NextRequest) {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Protect student/teacher portal
+  if (
+    pathname === '/dashboard' ||
+    pathname.startsWith('/dashboard/') ||
+    pathname === '/lehrer/dashboard' ||
+    pathname.startsWith('/lehrer/dashboard/')
+  ) {
+    const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+    if (!token) return buildLoginRedirect(request);
+    return NextResponse.next();
+  }
+
   // Protect onboarding
   if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
     const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
@@ -41,7 +53,13 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/onboarding/:path*', '/admin/:path*', '/api/admin/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/lehrer/dashboard/:path*',
+    '/onboarding/:path*',
+    '/admin/:path*',
+    '/api/admin/:path*',
+  ],
 };
 
 
