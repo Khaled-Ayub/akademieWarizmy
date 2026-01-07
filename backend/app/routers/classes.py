@@ -110,9 +110,79 @@ class ScheduleCreate(BaseModel):
     zoom_join_url: Optional[str] = None
 
 
+class ClassUpdate(BaseModel):
+    """Schema für Klasse aktualisieren"""
+    course_id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    max_students: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class ScheduleUpdate(BaseModel):
+    """Schema für Schedule aktualisieren"""
+    day_of_week: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    session_type: Optional[str] = None
+    location: Optional[str] = None
+    zoom_join_url: Optional[str] = None
+
+
 # =========================================
 # API Endpunkte - Admin
 # =========================================
+@router.get("/admin/{class_id}", response_model=ClassResponse)
+async def admin_get_class(
+    class_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Einzelne Klasse abrufen (Admin, ohne Auth für interne Calls).
+    """
+    result = await db.execute(
+        select(Class)
+        .options(
+            selectinload(Class.schedules),
+            selectinload(Class.enrollments),
+        )
+        .where(Class.id == class_id)
+    )
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Klasse nicht gefunden"
+        )
+    
+    return ClassResponse(
+        id=str(class_.id),
+        course_id=str(class_.course_id),
+        name=class_.name,
+        description=class_.description,
+        start_date=class_.start_date,
+        end_date=class_.end_date,
+        max_students=class_.max_students,
+        current_students=len([e for e in class_.enrollments if e.status.value == "active"]),
+        is_active=class_.is_active,
+        schedules=[
+            ClassScheduleResponse(
+                id=str(s.id),
+                day_of_week=s.day_of_week,
+                day_name=day_name(s.day_of_week),
+                start_time=s.start_time.strftime("%H:%M"),
+                end_time=s.end_time.strftime("%H:%M"),
+                session_type=s.session_type.value,
+                location=s.location,
+            )
+            for s in class_.schedules
+        ],
+    )
+
+
 @router.get("/admin", response_model=List[ClassResponse])
 async def admin_get_all_classes(
     db: AsyncSession = Depends(get_db)
@@ -265,7 +335,182 @@ async def create_schedule(
 
 
 # =========================================
-# API Endpunkte - User
+# Schedule CRUD (muss VOR /{class_id} kommen!)
+# =========================================
+@router.put("/schedules/{schedule_id}", response_model=ClassScheduleResponse)
+async def update_schedule(
+    schedule_id: str,
+    schedule_data: ScheduleUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Schedule aktualisieren (Admin).
+    """
+    from datetime import time as time_type
+    from app.models.class_ import SessionType
+    
+    # Schedule laden
+    result = await db.execute(select(ClassSchedule).where(ClassSchedule.id == schedule_id))
+    schedule = result.scalar_one_or_none()
+    
+    if not schedule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Schedule nicht gefunden"
+        )
+    
+    # Felder aktualisieren
+    if schedule_data.day_of_week is not None:
+        schedule.day_of_week = schedule_data.day_of_week
+    if schedule_data.start_time is not None:
+        parts = schedule_data.start_time.split(":")
+        schedule.start_time = time_type(int(parts[0]), int(parts[1]))
+    if schedule_data.end_time is not None:
+        parts = schedule_data.end_time.split(":")
+        schedule.end_time = time_type(int(parts[0]), int(parts[1]))
+    if schedule_data.session_type is not None:
+        schedule.session_type = SessionType(schedule_data.session_type)
+    if schedule_data.location is not None:
+        schedule.location = schedule_data.location
+    if schedule_data.zoom_join_url is not None:
+        schedule.zoom_join_url = schedule_data.zoom_join_url
+    
+    await db.commit()
+    await db.refresh(schedule)
+    
+    return ClassScheduleResponse(
+        id=str(schedule.id),
+        day_of_week=schedule.day_of_week,
+        day_name=day_name(schedule.day_of_week),
+        start_time=schedule.start_time.strftime("%H:%M"),
+        end_time=schedule.end_time.strftime("%H:%M"),
+        session_type=schedule.session_type.value,
+        location=schedule.location,
+    )
+
+
+@router.delete("/schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_schedule(
+    schedule_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Schedule löschen (Admin).
+    """
+    # Schedule laden
+    result = await db.execute(select(ClassSchedule).where(ClassSchedule.id == schedule_id))
+    schedule = result.scalar_one_or_none()
+    
+    if not schedule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Schedule nicht gefunden"
+        )
+    
+    await db.delete(schedule)
+    await db.commit()
+    
+    return None
+
+
+# =========================================
+# Klassen CRUD
+# =========================================
+@router.put("/{class_id}", response_model=ClassResponse)
+async def update_class(
+    class_id: str,
+    class_data: ClassUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Klasse aktualisieren (Admin).
+    """
+    from uuid import UUID
+    
+    # Klasse laden
+    result = await db.execute(
+        select(Class)
+        .options(selectinload(Class.schedules), selectinload(Class.enrollments))
+        .where(Class.id == class_id)
+    )
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Klasse nicht gefunden"
+        )
+    
+    # Felder aktualisieren
+    if class_data.course_id is not None:
+        class_.course_id = UUID(class_data.course_id)
+    if class_data.name is not None:
+        class_.name = class_data.name
+    if class_data.description is not None:
+        class_.description = class_data.description
+    if class_data.start_date is not None:
+        class_.start_date = class_data.start_date
+    if class_data.end_date is not None:
+        class_.end_date = class_data.end_date
+    if class_data.max_students is not None:
+        class_.max_students = class_data.max_students
+    if class_data.is_active is not None:
+        class_.is_active = class_data.is_active
+    
+    await db.commit()
+    await db.refresh(class_)
+    
+    return ClassResponse(
+        id=str(class_.id),
+        course_id=str(class_.course_id),
+        name=class_.name,
+        description=class_.description,
+        start_date=class_.start_date,
+        end_date=class_.end_date,
+        max_students=class_.max_students,
+        current_students=len([e for e in class_.enrollments if e.status.value == "active"]),
+        is_active=class_.is_active,
+        schedules=[
+            ClassScheduleResponse(
+                id=str(s.id),
+                day_of_week=s.day_of_week,
+                day_name=day_name(s.day_of_week),
+                start_time=s.start_time.strftime("%H:%M"),
+                end_time=s.end_time.strftime("%H:%M"),
+                session_type=s.session_type.value,
+                location=s.location,
+            )
+            for s in class_.schedules
+        ],
+    )
+
+
+@router.delete("/{class_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_class(
+    class_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Klasse löschen (Admin).
+    """
+    # Klasse laden
+    result = await db.execute(select(Class).where(Class.id == class_id))
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Klasse nicht gefunden"
+        )
+    
+    await db.delete(class_)
+    await db.commit()
+    
+    return None
+
+
+# =========================================
+# API Endpunkte - User (GET)
 # =========================================
 @router.get("/{class_id}", response_model=ClassDetailResponse)
 async def get_class(
