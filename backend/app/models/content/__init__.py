@@ -12,6 +12,7 @@ from app.models.content.daily_guidance import (
     Weekday,
     RamadanMode,
 )
+from app.models.content.location import Location
 
 __all__ = [
     "TeacherProfile",
@@ -21,5 +22,6 @@ __all__ = [
     "DailyGuidance",
     "Weekday",
     "RamadanMode",
+    "Location",
 ]
 

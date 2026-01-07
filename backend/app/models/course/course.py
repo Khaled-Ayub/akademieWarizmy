@@ -159,6 +159,21 @@ class Course(Base):
     )
     
     # =========================================
+    # Standort
+    # =========================================
+    default_location_id = Column(
+        UUID(as_uuid=True), 
+        ForeignKey("locations.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Standard-Standort des Kurses"
+    )
+    session_type = Column(
+        String(20),
+        default="online",
+        comment="Unterrichtsart: online, onsite, hybrid"
+    )
+    
+    # =========================================
     # Kurs-Einstellungen
     # =========================================
     duration_weeks = Column(
@@ -230,6 +245,11 @@ class Course(Base):
         "TeacherProfile",
         secondary=course_teachers,
         back_populates="courses"
+    )
+    
+    default_location = relationship(
+        "Location",
+        foreign_keys=[default_location_id]
     )
     
     testimonials = relationship(

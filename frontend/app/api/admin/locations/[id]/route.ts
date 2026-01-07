@@ -1,0 +1,95 @@
+// ===========================================
+// WARIZMY EDUCATION - Admin Single Location API
+// ===========================================
+
+import { NextRequest, NextResponse } from 'next/server';
+
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+// GET - Einzelnen Standort abrufen
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const res = await fetch(`${API_URL}/locations/${params.id}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      return NextResponse.json(error, { status: res.status });
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error fetching location:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch location' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Standort aktualisieren
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    
+    const res = await fetch(`${API_URL}/locations/${params.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Backend Error:', errorText);
+      try {
+        const error = JSON.parse(errorText);
+        return NextResponse.json(error, { status: res.status });
+      } catch {
+        return NextResponse.json({ error: errorText }, { status: res.status });
+      }
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error updating location:', error);
+    return NextResponse.json(
+      { error: 'Failed to update location' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Standort löschen
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const res = await fetch(`${API_URL}/locations/${params.id}`, {
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      return NextResponse.json(error, { status: res.status });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting location:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete location' },
+      { status: 500 }
+    );
+  }
+}
+

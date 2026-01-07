@@ -18,7 +18,8 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  MapPin
 } from 'lucide-react';
 import { useState } from 'react';
 import { ToastProvider } from '@/components/Toast';
@@ -47,6 +48,11 @@ const navItems = [
     href: '/admin/klassen', 
     label: 'Klassen', 
     icon: Users,
+  },
+  { 
+    href: '/admin/standorte', 
+    label: 'Standorte', 
+    icon: MapPin,
   },
   { 
     href: '/admin/zahlungen', 

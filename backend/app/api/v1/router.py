@@ -21,6 +21,7 @@ from app.routers import (
     content,
     upload,
     homework,
+    locations,
 )
 
 # Haupt-Router für API v1
@@ -141,5 +142,14 @@ api_router.include_router(
     admin.router,
     prefix="/admin",
     tags=["Admin"]
+)
+
+# =========================================
+# Standorte
+# =========================================
+api_router.include_router(
+    locations.router,
+    prefix="/locations",
+    tags=["Standorte"]
 )
 

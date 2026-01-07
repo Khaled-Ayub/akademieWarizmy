@@ -108,6 +108,7 @@ from app.models.content import (
     DailyGuidance,
     Weekday,
     RamadanMode,
+    Location,
 )
 
 # System-Modelle
@@ -203,6 +204,7 @@ __all__ = [
     "DailyGuidance",
     "Weekday",
     "RamadanMode",
+    "Location",
     
     # =========================================
     # System (Feiertage, E-Mail-Logs)

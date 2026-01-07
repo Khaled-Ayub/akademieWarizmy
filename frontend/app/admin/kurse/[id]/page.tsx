@@ -1136,10 +1136,15 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
     price_type: 'one_time',
     course_type: 'course',
     duration_weeks: 0,
+    session_type: 'online',
+    default_location_id: '',
     is_active: false,
     is_featured: false,
     is_published: false,
   });
+  
+  // Standorte laden
+  const [locations, setLocations] = useState<{id: string; name: string; is_online: boolean}[]>([]);
   
   // Slug generieren Funktion
   const generateCourseSlug = (title: string) => {
@@ -1243,6 +1248,8 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
             price_type: courseData.price_type || 'one_time',
             course_type: courseData.course_type || 'course',
             duration_weeks: courseData.duration_weeks || 0,
+            session_type: courseData.session_type || 'online',
+            default_location_id: courseData.default_location_id || '',
             is_active: courseData.is_active || false,
             is_featured: courseData.is_featured || false,
             is_published: courseData.is_published || false,
@@ -1270,6 +1277,20 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
     }
     loadCourse();
   }, [params.id]);
+
+  // Standorte laden
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/admin/locations');
+        const data = await res.json();
+        setLocations(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error loading locations:', err);
+      }
+    }
+    loadLocations();
+  }, []);
 
   // Kurs speichern (über lokale API-Route)
   const handleSave = async () => {
@@ -1575,7 +1596,40 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-6 pt-2">
+            {/* Unterrichtsart & Standort */}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">📍 Unterrichtsart</label>
+                <select
+                  value={formData.session_type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, session_type: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg"
+                >
+                  <option value="online">🌐 Online (Zoom)</option>
+                  <option value="onsite">🏢 Vor Ort</option>
+                  <option value="hybrid">🔄 Hybrid (Online + Vor Ort)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Standort</label>
+                <select
+                  value={formData.default_location_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, default_location_id: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg"
+                  disabled={formData.session_type === 'online'}
+                >
+                  <option value="">Kein Standort</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+                {formData.session_type === 'online' && (
+                  <p className="text-xs text-gray-500 mt-1">Bei Online nicht erforderlich</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-6 pt-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"

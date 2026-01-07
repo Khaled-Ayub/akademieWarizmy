@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Search, 
@@ -16,73 +16,53 @@ import {
   Calendar,
   BookOpen,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 // =========================================
-// Mock Data
+// Types
 // =========================================
-const classes = [
-  { 
-    id: '1', 
-    name: 'Arabisch Anfänger - Herbst 2026',
-    course: 'Arabisch für Anfänger',
-    teacher: 'Ustadh Ahmad',
-    students: 15,
-    maxStudents: 20,
-    startDate: '2026-09-01',
-    endDate: '2027-01-31',
-    schedule: 'Mo & Mi, 18:00-19:30',
-    status: 'active',
-    progress: 65,
-  },
-  { 
-    id: '2', 
-    name: 'Quran Rezitation - Abend',
-    course: 'Quran Rezitation',
-    teacher: 'Ustadha Fatima',
-    students: 8,
-    maxStudents: 12,
-    startDate: '2026-10-01',
-    endDate: '2027-03-31',
-    schedule: 'Di & Do, 20:00-21:00',
-    status: 'active',
-    progress: 45,
-  },
-  { 
-    id: '3', 
-    name: 'Sira Intensiv - Winter',
-    course: 'Islamische Geschichte',
-    teacher: 'Sheikh Abdullah',
-    students: 22,
-    maxStudents: 25,
-    startDate: '2026-11-01',
-    endDate: '2027-02-28',
-    schedule: 'Sa, 10:00-12:00',
-    status: 'active',
-    progress: 30,
-  },
-  { 
-    id: '4', 
-    name: 'Arabisch A2 - Sommer 2026',
-    course: 'Arabisch für Fortgeschrittene',
-    teacher: 'Ustadh Ahmad',
-    students: 12,
-    maxStudents: 15,
-    startDate: '2026-03-01',
-    endDate: '2026-07-31',
-    schedule: 'Mo & Mi, 18:00-19:30',
-    status: 'completed',
-    progress: 100,
-  },
-];
+interface ClassSchedule {
+  id: string;
+  day_of_week: number;
+  day_name: string;
+  start_time: string;
+  end_time: string;
+  session_type: string;
+}
+
+interface ClassItem {
+  id: string;
+  name: string;
+  description?: string;
+  course_id: string;
+  start_date: string;
+  end_date?: string;
+  max_students?: number;
+  current_students: number;
+  is_active: boolean;
+  schedules: ClassSchedule[];
+}
 
 // =========================================
 // Klassen-Karte
 // =========================================
-function ClassCard({ classItem, onAction }: { classItem: typeof classes[0]; onAction: (action: string, id: string) => void }) {
+function ClassCard({ 
+  classItem, 
+  onDelete 
+}: { 
+  classItem: ClassItem; 
+  onDelete: (id: string) => void;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isFull = classItem.students >= classItem.maxStudents;
+  const isFull = classItem.max_students ? classItem.current_students >= classItem.max_students : false;
+
+  // Schedule als String formatieren
+  const scheduleString = classItem.schedules
+    .map(s => `${s.day_name.substring(0, 2)} ${s.start_time}`)
+    .join(', ');
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all">
@@ -91,13 +71,13 @@ function ClassCard({ classItem, onAction }: { classItem: typeof classes[0]; onAc
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-              classItem.status === 'active' 
+              classItem.is_active 
                 ? 'bg-green-100 text-green-700' 
                 : 'bg-gray-100 text-gray-600'
             }`}>
-              {classItem.status === 'active' ? 'Aktiv' : 'Abgeschlossen'}
+              {classItem.is_active ? 'Aktiv' : 'Inaktiv'}
             </span>
-            {isFull && classItem.status === 'active' && (
+            {isFull && classItem.is_active && (
               <span className="text-xs font-medium px-2 py-1 rounded-full bg-orange-100 text-orange-700">
                 Voll
               </span>
@@ -132,7 +112,7 @@ function ClassCard({ classItem, onAction }: { classItem: typeof classes[0]; onAc
                     Studenten
                   </Link>
                   <button
-                    onClick={() => { onAction('delete', classItem.id); setMenuOpen(false); }}
+                    onClick={() => { onDelete(classItem.id); setMenuOpen(false); }}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -146,40 +126,29 @@ function ClassCard({ classItem, onAction }: { classItem: typeof classes[0]; onAc
 
         {/* Title */}
         <h3 className="text-lg font-semibold text-gray-900 mb-1">{classItem.name}</h3>
-        <p className="text-sm text-gray-500 mb-4">{classItem.course}</p>
+        {classItem.description && (
+          <p className="text-sm text-gray-500 mb-4 line-clamp-2">{classItem.description}</p>
+        )}
 
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-3 text-sm mb-4">
           <div className="flex items-center gap-2 text-gray-600">
             <Users className="w-4 h-4 text-gray-400" />
-            <span>{classItem.students}/{classItem.maxStudents} Studenten</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <BookOpen className="w-4 h-4 text-gray-400" />
-            <span>{classItem.teacher}</span>
+            <span>
+              {classItem.current_students}
+              {classItem.max_students ? `/${classItem.max_students}` : ''} Studenten
+            </span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <Calendar className="w-4 h-4 text-gray-400" />
-            <span>{new Date(classItem.startDate).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' })}</span>
+            <span>{new Date(classItem.start_date).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' })}</span>
           </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span className="truncate">{classItem.schedule}</span>
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div>
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-gray-500">Fortschritt</span>
-            <span className="font-medium text-gray-700">{classItem.progress}%</span>
-          </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full ${classItem.progress === 100 ? 'bg-green-500' : 'bg-primary-500'}`}
-              style={{ width: `${classItem.progress}%` }}
-            />
-          </div>
+          {scheduleString && (
+            <div className="flex items-center gap-2 text-gray-600 col-span-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="truncate">{scheduleString}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -201,25 +170,63 @@ function ClassCard({ classItem, onAction }: { classItem: typeof classes[0]; onAc
 // Hauptseite
 // =========================================
 export default function AdminClassesPage() {
+  const toast = useToast();
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Klassen laden
+  useEffect(() => {
+    loadClasses();
+  }, []);
+
+  const loadClasses = async () => {
+    try {
+      const res = await fetch('/api/admin/classes');
+      const data = await res.json();
+      setClasses(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading classes:', err);
+      toast.error('Fehler beim Laden der Klassen');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Klasse wirklich löschen?')) return;
+    
+    try {
+      const res = await fetch(`/api/admin/classes/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Fehler beim Löschen');
+      
+      setClasses(prev => prev.filter(c => c.id !== id));
+      toast.success('Klasse gelöscht');
+    } catch (err) {
+      toast.error('Fehler beim Löschen');
+    }
+  };
+
   const filteredClasses = classes.filter(c => {
     const matchesSearch = 
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.course.toLowerCase().includes(search.toLowerCase()) ||
-      c.teacher.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+      c.name.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && c.is_active) ||
+      (statusFilter === 'inactive' && !c.is_active);
     return matchesSearch && matchesStatus;
   });
 
-  const handleAction = (action: string, id: string) => {
-    console.log(`Action: ${action}, Class: ${id}`);
-    // TODO: Implement actions
-  };
+  const activeClasses = classes.filter(c => c.is_active).length;
+  const totalStudents = classes.reduce((sum, c) => sum + c.current_students, 0);
 
-  const activeClasses = classes.filter(c => c.status === 'active').length;
-  const totalStudents = classes.filter(c => c.status === 'active').reduce((sum, c) => sum + c.students, 0);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -260,7 +267,7 @@ export default function AdminClassesPage() {
         >
           <option value="all">Alle Status</option>
           <option value="active">Aktiv</option>
-          <option value="completed">Abgeschlossen</option>
+          <option value="inactive">Inaktiv</option>
         </select>
       </div>
 
@@ -268,7 +275,11 @@ export default function AdminClassesPage() {
       {filteredClasses.length > 0 ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredClasses.map((classItem) => (
-            <ClassCard key={classItem.id} classItem={classItem} onAction={handleAction} />
+            <ClassCard 
+              key={classItem.id} 
+              classItem={classItem} 
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       ) : (
@@ -292,4 +303,3 @@ export default function AdminClassesPage() {
     </div>
   );
 }
-
