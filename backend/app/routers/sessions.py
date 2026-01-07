@@ -69,7 +69,65 @@ class ConfirmationResponse(BaseModel):
 
 
 # =========================================
-# API Endpunkte
+# API Endpunkte - Öffentlich (für Startseite)
+# =========================================
+@router.get("/public")
+async def get_public_sessions(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Öffentliche Sessions für Stundenplan auf Startseite.
+    Zeigt alle nicht-abgesagten Sessions im angegebenen Zeitraum.
+    """
+    from app.models import Course, Class
+    
+    query = select(LiveSession).options(
+        selectinload(LiveSession.class_),
+        selectinload(LiveSession.course),
+    ).where(LiveSession.is_cancelled == False)
+    
+    # Datumsfilter
+    if from_date:
+        query = query.where(LiveSession.scheduled_at >= datetime.fromisoformat(from_date))
+    if to_date:
+        query = query.where(LiveSession.scheduled_at <= datetime.fromisoformat(to_date + "T23:59:59"))
+    
+    # Default: Nur zukünftige Sessions
+    if not from_date and not to_date:
+        query = query.where(LiveSession.scheduled_at >= datetime.utcnow())
+    
+    query = query.order_by(LiveSession.scheduled_at).limit(50)
+    
+    result = await db.execute(query)
+    sessions = result.scalars().all()
+    
+    return [
+        {
+            "id": str(s.id),
+            "title": s.title,
+            "date": s.scheduled_at.strftime("%Y-%m-%d"),
+            "start_time": s.scheduled_at.strftime("%H:%M:%S"),
+            "end_time": (s.scheduled_at + timedelta(minutes=s.duration_minutes)).strftime("%H:%M:%S"),
+            "type": s.session_type.value,
+            "location": s.location,
+            "zoom_link": s.zoom_join_url,
+            "description": s.description,
+            "color": "primary",  # Kann je nach Kurstyp variieren
+            "course": {
+                "id": str(s.course_id) if s.course_id else None,
+                "title": s.course.title if s.course else None,
+                "slug": s.course.slug if s.course else None,
+            } if s.course_id else None,
+            "teacher": None,  # TODO: Lehrer aus Class laden
+        }
+        for s in sessions
+    ]
+
+
+# =========================================
+# API Endpunkte - Authentifiziert
 # =========================================
 @router.get("/", response_model=List[SessionResponse])
 async def get_my_sessions(

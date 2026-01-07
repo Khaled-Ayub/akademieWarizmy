@@ -45,7 +45,7 @@ class ClassScheduleResponse(BaseModel):
 class ClassResponse(BaseModel):
     """Schema für Klasse"""
     id: str
-    course_id: int
+    course_id: str
     name: str
     description: Optional[str]
     start_date: date
@@ -87,7 +87,169 @@ def day_name(day: int) -> str:
 
 
 # =========================================
-# API Endpunkte
+# Pydantic Schemas für Create/Update
+# =========================================
+class ClassCreate(BaseModel):
+    """Schema für Klasse erstellen"""
+    course_id: str
+    name: str
+    description: Optional[str] = None
+    start_date: date
+    end_date: Optional[date] = None
+    max_students: Optional[int] = None
+    is_active: bool = True
+
+
+class ScheduleCreate(BaseModel):
+    """Schema für Schedule erstellen"""
+    day_of_week: int
+    start_time: str  # HH:MM
+    end_time: str    # HH:MM
+    session_type: str = "online"
+    location: Optional[str] = None
+    zoom_join_url: Optional[str] = None
+
+
+# =========================================
+# API Endpunkte - Admin
+# =========================================
+@router.get("/admin", response_model=List[ClassResponse])
+async def admin_get_all_classes(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Alle Klassen abrufen (Admin).
+    """
+    result = await db.execute(
+        select(Class)
+        .options(
+            selectinload(Class.schedules),
+            selectinload(Class.enrollments),
+        )
+        .order_by(Class.start_date.desc())
+    )
+    classes = result.scalars().all()
+    
+    return [
+        ClassResponse(
+            id=str(c.id),
+            course_id=str(c.course_id),
+            name=c.name,
+            description=c.description,
+            start_date=c.start_date,
+            end_date=c.end_date,
+            max_students=c.max_students,
+            current_students=len([e for e in c.enrollments if e.status.value == "active"]),
+            is_active=c.is_active,
+            schedules=[
+                ClassScheduleResponse(
+                    id=str(s.id),
+                    day_of_week=s.day_of_week,
+                    day_name=day_name(s.day_of_week),
+                    start_time=s.start_time.strftime("%H:%M"),
+                    end_time=s.end_time.strftime("%H:%M"),
+                    session_type=s.session_type.value,
+                    location=s.location,
+                )
+                for s in c.schedules
+            ],
+        )
+        for c in classes
+    ]
+
+
+@router.post("", response_model=ClassResponse, status_code=status.HTTP_201_CREATED)
+async def create_class(
+    class_data: ClassCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Neue Klasse erstellen.
+    """
+    from uuid import UUID
+    
+    new_class = Class(
+        course_id=UUID(class_data.course_id),
+        name=class_data.name,
+        description=class_data.description,
+        start_date=class_data.start_date,
+        end_date=class_data.end_date,
+        max_students=class_data.max_students,
+        is_active=class_data.is_active,
+    )
+    
+    db.add(new_class)
+    await db.commit()
+    await db.refresh(new_class)
+    
+    return ClassResponse(
+        id=str(new_class.id),
+        course_id=str(new_class.course_id),
+        name=new_class.name,
+        description=new_class.description,
+        start_date=new_class.start_date,
+        end_date=new_class.end_date,
+        max_students=new_class.max_students,
+        current_students=0,
+        is_active=new_class.is_active,
+        schedules=[],
+    )
+
+
+@router.post("/{class_id}/schedules", response_model=ClassScheduleResponse, status_code=status.HTTP_201_CREATED)
+async def create_schedule(
+    class_id: str,
+    schedule_data: ScheduleCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Schedule zu einer Klasse hinzufügen.
+    """
+    from uuid import UUID
+    from datetime import time
+    from app.models.class_ import SessionType
+    
+    # Klasse prüfen
+    result = await db.execute(select(Class).where(Class.id == class_id))
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Klasse nicht gefunden"
+        )
+    
+    # Zeit parsen (HH:MM)
+    start_parts = schedule_data.start_time.split(":")
+    end_parts = schedule_data.end_time.split(":")
+    
+    new_schedule = ClassSchedule(
+        class_id=UUID(class_id),
+        day_of_week=schedule_data.day_of_week,
+        start_time=time(int(start_parts[0]), int(start_parts[1])),
+        end_time=time(int(end_parts[0]), int(end_parts[1])),
+        session_type=SessionType(schedule_data.session_type),
+        location=schedule_data.location,
+        zoom_join_url=schedule_data.zoom_join_url,
+    )
+    
+    db.add(new_schedule)
+    await db.commit()
+    await db.refresh(new_schedule)
+    
+    return ClassScheduleResponse(
+        id=str(new_schedule.id),
+        day_of_week=new_schedule.day_of_week,
+        day_name=day_name(new_schedule.day_of_week),
+        start_time=new_schedule.start_time.strftime("%H:%M"),
+        end_time=new_schedule.end_time.strftime("%H:%M"),
+        session_type=new_schedule.session_type.value,
+        location=new_schedule.location,
+    )
+
+
+# =========================================
+# API Endpunkte - User
 # =========================================
 @router.get("/{class_id}", response_model=ClassDetailResponse)
 async def get_class(

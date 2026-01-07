@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     if (courseId) queryParams.append('course_id', courseId);
 
     const queryString = queryParams.toString();
-    const url = `${API_URL}/sessions${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_URL}/sessions/public${queryString ? `?${queryString}` : ''}`;
 
     // FastAPI aufrufen
     const res = await fetch(url, {
