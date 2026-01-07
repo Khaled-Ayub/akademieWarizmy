@@ -15,7 +15,7 @@ const API_URL = process.env.API_INTERNAL_URL
 /**
  * Helper: Authorization Header aus Cookies erstellen
  */
-async function getAuthHeaders() {
+async function getAuthHeaders(): Promise<Record<string, string>> {
   const cookieStore = await cookies();
   const token = cookieStore.get('warizmy_access_token')?.value;
   
