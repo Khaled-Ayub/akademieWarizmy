@@ -219,9 +219,17 @@ export const authApi = {
 
     const { access_token, refresh_token, user } = json;
     
+    // Validate response
+    if (!access_token || !user) {
+      console.error('Login response missing required fields:', json);
+      throw new Error('Login fehlgeschlagen: Ungültige Server-Antwort');
+    }
+    
     // Tokens speichern
     setAccessToken(access_token);
-    setRefreshToken(refresh_token);
+    if (refresh_token) {
+      setRefreshToken(refresh_token);
+    }
     
     return { user };
   },

@@ -50,7 +50,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     setError(null);
     try {
-      await doRegister({
+      const user = await doRegister({
         email: data.email,
         password: data.password,
         first_name: data.first_name,
@@ -61,8 +61,7 @@ export default function RegisterPage() {
       const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
 
       // Students go to onboarding if needed
-      const u = useAuthStore.getState().user;
-      if (u?.role === 'student' && !u?.onboarding_completed) {
+      if (user?.role === 'student' && !user?.onboarding_completed) {
         router.push(`/onboarding?next=${encodeURIComponent(safeNext)}`);
         return;
       }

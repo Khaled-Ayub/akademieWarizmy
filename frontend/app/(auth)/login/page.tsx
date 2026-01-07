@@ -55,13 +55,12 @@ export default function LoginPage() {
     setError(null);
     
     try {
-      await login(data.email, data.password);
+      const user = await login(data.email, data.password);
       const next = searchParams.get('next');
       const safeNext =
         next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
       // If student hasn't completed onboarding, force onboarding first.
-      const u = useAuthStore.getState().user;
-      if (u?.role === 'student' && !u?.onboarding_completed) {
+      if (user?.role === 'student' && !user?.onboarding_completed) {
         router.push(`/onboarding?next=${encodeURIComponent(safeNext)}`);
         return;
       }

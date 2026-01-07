@@ -34,9 +34,9 @@ interface AuthState {
   isAuthenticated: boolean;
   
   // Actions
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData) => Promise<User>;
   fetchUser: () => Promise<void>;
   setUser: (user: User | null) => void;
   checkAuth: () => Promise<boolean>;
@@ -80,6 +80,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true, 
             isLoading: false 
           });
+          return user;
         } catch (error) {
           set({ isLoading: false });
           throw error;
@@ -113,7 +114,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           await authApi.register(data);
           // Nach Registrierung automatisch einloggen
-          await get().login(data.email, data.password);
+          const user = await get().login(data.email, data.password);
+          return user;
         } catch (error) {
           set({ isLoading: false });
           throw error;
