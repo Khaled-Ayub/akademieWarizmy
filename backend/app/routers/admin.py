@@ -427,10 +427,10 @@ async def list_classes(
         {
             "id": str(c.id),
             "name": c.name,
-            "course_id": c.course_id,
+            "course_id": str(c.course_id),
             "start_date": c.start_date.isoformat(),
             "end_date": c.end_date.isoformat() if c.end_date else None,
-            "student_count": len([e for e in c.enrollments if e.status.value == "active"]),
+            "current_students": len([e for e in c.enrollments if e.status.value == "active"]),
             "max_students": c.max_students,
             "is_active": c.is_active,
         }

@@ -27,7 +27,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 export async function GET(request: NextRequest) {
   try {
     const authHeaders = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/classes/admin`, {
+    const res = await fetch(`${API_URL}/admin/classes`, {
       headers: { 
         'Content-Type': 'application/json',
         ...authHeaders,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     const authHeaders = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/classes`, {
+    const res = await fetch(`${API_URL}/admin/classes`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
