@@ -33,7 +33,9 @@ from app.models import (
     ExamResult,
     Certificate,
     Holiday,
+    Course,
 )
+from app.models.class_.class_model import class_courses
 from app.routers.auth import get_current_user, require_role, get_password_hash
 
 router = APIRouter()
@@ -144,6 +146,7 @@ class ClassCreate(BaseModel):
     start_date: date
     end_date: Optional[date] = None
     max_students: Optional[int] = None
+    course_ids: Optional[List[str]] = None  # Mehrere Kurse
 
 
 class ClassScheduleCreate(BaseModel):
@@ -461,6 +464,160 @@ async def create_class(
     return {"id": str(class_.id), "message": "Klasse erstellt"}
 
 
+@router.get("/classes/{class_id}")
+async def get_class(
+    class_id: str,
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Einzelne Klasse mit allen Details abrufen"""
+    result = await db.execute(
+        select(Class)
+        .options(
+            selectinload(Class.enrollments),
+            selectinload(Class.schedules),
+            selectinload(Class.courses),
+            selectinload(Class.teachers)
+        )
+        .where(Class.id == class_id)
+    )
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(status_code=404, detail="Klasse nicht gefunden")
+    
+    return {
+        "id": str(class_.id),
+        "name": class_.name,
+        "description": class_.description,
+        "course_id": str(class_.course_id) if class_.course_id else None,
+        "start_date": class_.start_date.isoformat(),
+        "end_date": class_.end_date.isoformat() if class_.end_date else None,
+        "max_students": class_.max_students,
+        "is_active": class_.is_active,
+        "current_students": len([e for e in class_.enrollments if e.status.value == "active"]),
+        "schedules": [
+            {
+                "id": str(s.id),
+                "day_of_week": s.day_of_week,
+                "start_time": s.start_time.strftime("%H:%M") if s.start_time else None,
+                "end_time": s.end_time.strftime("%H:%M") if s.end_time else None,
+                "session_type": s.session_type.value if s.session_type else "hybrid",
+                "location": s.location,
+                "location_id": str(s.location_id) if s.location_id else None,
+                "frequency": s.frequency or 1,
+                "zoom_join_url": s.zoom_join_url,
+            }
+            for s in class_.schedules
+        ],
+        "courses": [
+            {"id": str(c.id), "title": c.title, "slug": c.slug}
+            for c in class_.courses
+        ],
+        "enrollments": [
+            {
+                "id": str(e.id),
+                "user_id": str(e.user_id),
+                "status": e.status.value,
+                "enrollment_type": e.enrollment_type,
+            }
+            for e in class_.enrollments
+        ],
+    }
+
+
+@router.put("/classes/{class_id}")
+async def update_class(
+    class_id: str,
+    data: ClassCreate,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Klasse aktualisieren"""
+    result = await db.execute(
+        select(Class).options(selectinload(Class.courses)).where(Class.id == class_id)
+    )
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(status_code=404, detail="Klasse nicht gefunden")
+    
+    class_.name = data.name
+    class_.description = data.description
+    class_.course_id = data.course_id
+    class_.start_date = data.start_date
+    class_.end_date = data.end_date
+    class_.max_students = data.max_students
+    
+    # Kurse aktualisieren (Many-to-Many)
+    if data.course_ids is not None:
+        # Alte Kurse entfernen
+        class_.courses.clear()
+        # Neue Kurse hinzufügen
+        for course_id in data.course_ids:
+            course_result = await db.execute(
+                select(Course).where(Course.id == course_id)
+            )
+            course = course_result.scalar_one_or_none()
+            if course:
+                class_.courses.append(course)
+    
+    await db.commit()
+    return {"message": "Klasse aktualisiert"}
+
+
+@router.post("/classes/{class_id}/courses")
+async def add_courses_to_class(
+    class_id: str,
+    course_ids: List[str],
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Kurse zu Klasse hinzufügen"""
+    result = await db.execute(
+        select(Class).options(selectinload(Class.courses)).where(Class.id == class_id)
+    )
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(status_code=404, detail="Klasse nicht gefunden")
+    
+    for course_id in course_ids:
+        course_result = await db.execute(
+            select(Course).where(Course.id == course_id)
+        )
+        course = course_result.scalar_one_or_none()
+        if course and course not in class_.courses:
+            class_.courses.append(course)
+    
+    await db.commit()
+    return {"message": f"{len(course_ids)} Kurs(e) zur Klasse hinzugefügt"}
+
+
+@router.delete("/classes/{class_id}/courses/{course_id}")
+async def remove_course_from_class(
+    class_id: str,
+    course_id: str,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Kurs von Klasse entfernen"""
+    result = await db.execute(
+        select(Class).options(selectinload(Class.courses)).where(Class.id == class_id)
+    )
+    class_ = result.scalar_one_or_none()
+    
+    if not class_:
+        raise HTTPException(status_code=404, detail="Klasse nicht gefunden")
+    
+    course_to_remove = next((c for c in class_.courses if str(c.id) == course_id), None)
+    if course_to_remove:
+        class_.courses.remove(course_to_remove)
+        await db.commit()
+    
+    return {"message": "Kurs von Klasse entfernt"}
+
+
 @router.post("/classes/{class_id}/students")
 async def add_student_to_class(
     class_id: str,
@@ -470,6 +627,27 @@ async def add_student_to_class(
     db: AsyncSession = Depends(get_db)
 ):
     """Student zu Klasse hinzufügen"""
+    # Prüfen ob User existiert
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    # Prüfen ob Klasse existiert
+    class_result = await db.execute(select(Class).where(Class.id == class_id))
+    class_ = class_result.scalar_one_or_none()
+    if not class_:
+        raise HTTPException(status_code=404, detail="Klasse nicht gefunden")
+    
+    # Prüfen ob bereits eingeschrieben
+    existing = await db.execute(
+        select(ClassEnrollment)
+        .where(ClassEnrollment.user_id == user_id)
+        .where(ClassEnrollment.class_id == class_id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Student bereits in dieser Klasse")
+    
     enrollment = ClassEnrollment(
         user_id=user_id,
         class_id=class_id,
@@ -479,6 +657,59 @@ async def add_student_to_class(
     await db.commit()
     
     return {"message": "Student zur Klasse hinzugefügt"}
+
+
+@router.get("/classes/{class_id}/students")
+async def get_class_students(
+    class_id: str,
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Alle Studenten einer Klasse abrufen"""
+    result = await db.execute(
+        select(ClassEnrollment)
+        .options(selectinload(ClassEnrollment.user))
+        .where(ClassEnrollment.class_id == class_id)
+    )
+    enrollments = result.scalars().all()
+    
+    return [
+        {
+            "enrollment_id": str(e.id),
+            "user_id": str(e.user_id),
+            "email": e.user.email if e.user else None,
+            "first_name": e.user.first_name if e.user else None,
+            "last_name": e.user.last_name if e.user else None,
+            "status": e.status.value,
+            "enrollment_type": e.enrollment_type,
+            "started_at": e.started_at.isoformat() if e.started_at else None,
+        }
+        for e in enrollments
+    ]
+
+
+@router.delete("/classes/{class_id}/students/{user_id}")
+async def remove_student_from_class(
+    class_id: str,
+    user_id: str,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Student von Klasse entfernen"""
+    result = await db.execute(
+        select(ClassEnrollment)
+        .where(ClassEnrollment.class_id == class_id)
+        .where(ClassEnrollment.user_id == user_id)
+    )
+    enrollment = result.scalar_one_or_none()
+    
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Einschreibung nicht gefunden")
+    
+    await db.delete(enrollment)
+    await db.commit()
+    
+    return {"message": "Student von Klasse entfernt"}
 
 
 @router.post("/classes/{class_id}/schedule")

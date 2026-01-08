@@ -64,6 +64,26 @@ interface ClassData {
   max_students: number | null;
   is_active: boolean;
   schedules: ScheduleEntry[];
+  courses?: { id: string; title: string; slug: string }[];
+  enrollments?: { id: string; user_id: string; status: string; enrollment_type: string }[];
+}
+
+interface UserOption {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface Student {
+  enrollment_id: string;
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  enrollment_type: string;
+  started_at: string;
 }
 
 // Wochentage
@@ -360,6 +380,11 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [addingStudent, setAddingStudent] = useState(false);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -413,6 +438,34 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
     loadLocations();
   }, []);
 
+  // Benutzer laden (für Student-Auswahl)
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/admin/users?role=student&limit=200');
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : [];
+        setUsers(items);
+      } catch (err) {
+        console.error('Error loading users:', err);
+      }
+    }
+    loadUsers();
+  }, []);
+
+  // Studenten der Klasse laden
+  const loadStudents = async () => {
+    try {
+      const res = await fetch(`/api/admin/classes/${id}/students`);
+      if (res.ok) {
+        const data = await res.json();
+        setStudents(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Error loading students:', err);
+    }
+  };
+
   // Klasse laden
   useEffect(() => {
     async function loadClass() {
@@ -443,6 +496,14 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
         }));
         setSchedules(loadedSchedules);
         setOriginalScheduleIds(loadedSchedules.map(s => s.id));
+
+        // Zugewiesene Kurse
+        if (classData.courses) {
+          setSelectedCourseIds(classData.courses.map(c => c.id));
+        }
+
+        // Studenten laden
+        await loadStudents();
 
       } catch (err: any) {
         console.error('Error loading data:', err);
@@ -482,6 +543,7 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
         end_date: formData.end_date || null,
         max_students: formData.max_students ? parseInt(formData.max_students) : null,
         is_active: formData.is_active,
+        course_ids: selectedCourseIds,  // Mehrere Kurse
       };
       
       const classRes = await fetch(`/api/admin/classes/${id}`, {
@@ -572,6 +634,56 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
+  };
+
+  // Student hinzufügen
+  const handleAddStudent = async () => {
+    if (!selectedUserId) {
+      toast.error('Bitte wähle einen Benutzer aus');
+      return;
+    }
+    setAddingStudent(true);
+    try {
+      const res = await fetch(`/api/admin/classes/${id}/students?user_id=${selectedUserId}&enrollment_type=one_time`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Fehler beim Hinzufügen');
+      }
+      toast.success('Student hinzugefügt');
+      setSelectedUserId('');
+      await loadStudents();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAddingStudent(false);
+    }
+  };
+
+  // Student entfernen
+  const handleRemoveStudent = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/admin/classes/${id}/students/${userId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error('Fehler beim Entfernen');
+      }
+      toast.success('Student entfernt');
+      await loadStudents();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  // Kurs-Checkbox Toggle
+  const toggleCourse = (courseId: string) => {
+    setSelectedCourseIds(prev => 
+      prev.includes(courseId)
+        ? prev.filter(id => id !== courseId)
+        : [...prev, courseId]
+    );
   };
 
   if (loading) {
@@ -670,6 +782,90 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
           {/* Stundenplan */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <ScheduleEditor schedules={schedules} onChange={setSchedules} locations={locations} />
+          </div>
+
+          {/* Kurse zuweisen */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary-500" />
+              Zugewiesene Kurse
+            </h2>
+            <p className="text-sm text-gray-500">Studenten dieser Klasse haben Zugriff auf alle ausgewählten Kurse.</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {courses.map(course => (
+                <label key={course.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedCourseIds.includes(course.id)}
+                    onChange={() => toggleCourse(course.id)}
+                    className="w-4 h-4 rounded text-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">{course.title}</span>
+                </label>
+              ))}
+            </div>
+            {selectedCourseIds.length > 0 && (
+              <p className="text-sm text-gray-500">
+                {selectedCourseIds.length} Kurs(e) ausgewählt
+              </p>
+            )}
+          </div>
+
+          {/* Studenten */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary-500" />
+              Studenten ({students.length})
+            </h2>
+            
+            {/* Student hinzufügen */}
+            <div className="flex gap-2">
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              >
+                <option value="">Benutzer auswählen...</option>
+                {users
+                  .filter(u => !students.find(s => s.user_id === u.id))
+                  .map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.first_name} {user.last_name} ({user.email})
+                    </option>
+                  ))}
+              </select>
+              <button
+                onClick={handleAddStudent}
+                disabled={addingStudent || !selectedUserId}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 disabled:opacity-50"
+              >
+                {addingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* Studenten-Liste */}
+            {students.length > 0 ? (
+              <div className="space-y-2">
+                {students.map(student => (
+                  <div key={student.enrollment_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {student.first_name} {student.last_name}
+                      </p>
+                      <p className="text-sm text-gray-500">{student.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveStudent(student.user_id)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">Noch keine Studenten in dieser Klasse.</p>
+            )}
           </div>
         </div>
 

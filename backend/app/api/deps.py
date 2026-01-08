@@ -4,15 +4,19 @@
 # Gemeinsame Dependencies für alle API-Router
 # (Authentifizierung, Datenbankzugriff, etc.)
 
-from typing import Optional
+from typing import Optional, List
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.core.security import decode_token
 from app.models.user import User, UserRole
+from app.models.class_.class_model import Class, ClassEnrollment, class_courses
+from app.models.enrollment.enrollment import Enrollment, EnrollmentStatus
+from app.models.course.course import Course
 
 # =========================================
 # Security Schema (Bearer Token)
@@ -165,4 +169,109 @@ async def require_teacher(user: User = Depends(get_current_user)) -> User:
             detail="Nur Lehrer haben Zugriff",
         )
     return user
+
+
+# =========================================
+# Kurs-Zugriffskontrolle
+# =========================================
+async def check_course_access(
+    user_id: str,
+    course_id: str,
+    db: AsyncSession
+) -> bool:
+    """
+    Prüft ob ein User Zugriff auf einen Kurs hat.
+    
+    Zugriff besteht wenn:
+    1. User direkt im Kurs eingeschrieben ist (Enrollment)
+    2. User in einer Klasse ist, die dem Kurs zugeordnet ist
+       - Über course_id (Legacy)
+       - Über class_courses Many-to-Many
+    
+    Returns:
+        True wenn Zugriff erlaubt, False sonst
+    """
+    # 1. Direkte Kurs-Einschreibung prüfen
+    direct_enrollment = await db.execute(
+        select(Enrollment)
+        .where(Enrollment.user_id == user_id)
+        .where(Enrollment.course_id == course_id)
+        .where(Enrollment.status == EnrollmentStatus.ACTIVE)
+    )
+    if direct_enrollment.scalar_one_or_none():
+        return True
+    
+    # 2. Klassen-Einschreibung prüfen (Legacy: course_id)
+    class_enrollment_legacy = await db.execute(
+        select(ClassEnrollment)
+        .join(Class, ClassEnrollment.class_id == Class.id)
+        .where(ClassEnrollment.user_id == user_id)
+        .where(Class.course_id == course_id)
+        .where(ClassEnrollment.status == "active")
+    )
+    if class_enrollment_legacy.scalar_one_or_none():
+        return True
+    
+    # 3. Klassen-Einschreibung prüfen (Many-to-Many: class_courses)
+    class_enrollment_m2m = await db.execute(
+        select(ClassEnrollment)
+        .join(Class, ClassEnrollment.class_id == Class.id)
+        .join(class_courses, Class.id == class_courses.c.class_id)
+        .where(ClassEnrollment.user_id == user_id)
+        .where(class_courses.c.course_id == course_id)
+        .where(ClassEnrollment.status == "active")
+    )
+    if class_enrollment_m2m.scalar_one_or_none():
+        return True
+    
+    return False
+
+
+async def get_user_courses(
+    user_id: str,
+    db: AsyncSession
+) -> List[str]:
+    """
+    Gibt alle Kurs-IDs zurück, auf die ein User Zugriff hat.
+    
+    Kombiniert:
+    - Direkte Einschreibungen (Enrollments)
+    - Klassen-Einschreibungen (Legacy course_id)
+    - Klassen-Einschreibungen (Many-to-Many class_courses)
+    """
+    course_ids = set()
+    
+    # 1. Direkte Einschreibungen
+    direct_result = await db.execute(
+        select(Enrollment.course_id)
+        .where(Enrollment.user_id == user_id)
+        .where(Enrollment.status == EnrollmentStatus.ACTIVE)
+    )
+    for row in direct_result:
+        course_ids.add(str(row[0]))
+    
+    # 2. Klassen mit Legacy course_id
+    class_legacy_result = await db.execute(
+        select(Class.course_id)
+        .join(ClassEnrollment, Class.id == ClassEnrollment.class_id)
+        .where(ClassEnrollment.user_id == user_id)
+        .where(ClassEnrollment.status == "active")
+        .where(Class.course_id.isnot(None))
+    )
+    for row in class_legacy_result:
+        if row[0]:
+            course_ids.add(str(row[0]))
+    
+    # 3. Klassen mit Many-to-Many courses
+    class_m2m_result = await db.execute(
+        select(class_courses.c.course_id)
+        .join(Class, class_courses.c.class_id == Class.id)
+        .join(ClassEnrollment, Class.id == ClassEnrollment.class_id)
+        .where(ClassEnrollment.user_id == user_id)
+        .where(ClassEnrollment.status == "active")
+    )
+    for row in class_m2m_result:
+        course_ids.add(str(row[0]))
+    
+    return list(course_ids)
 

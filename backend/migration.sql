@@ -1,3 +1,7 @@
-ALTER TABLE class_schedules ADD COLUMN IF NOT EXISTS frequency integer NOT NULL DEFAULT 1;
-ALTER TABLE class_schedules ADD COLUMN IF NOT EXISTS location_id uuid;
-DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_class_schedules_location_id') THEN ALTER TABLE class_schedules ADD CONSTRAINT fk_class_schedules_location_id FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL; END IF; END $$;
+CREATE TABLE IF NOT EXISTS class_courses (
+    class_id uuid NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    course_id uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    PRIMARY KEY (class_id, course_id)
+);
+CREATE INDEX IF NOT EXISTS idx_class_courses_class_id ON class_courses(class_id);
+CREATE INDEX IF NOT EXISTS idx_class_courses_course_id ON class_courses(course_id);

@@ -5,12 +5,21 @@
 
 import uuid
 from datetime import datetime, date, time
-from sqlalchemy import Column, String, Boolean, DateTime, Date, Time, Integer, ForeignKey, Enum, UniqueConstraint
+from sqlalchemy import Column, String, Boolean, DateTime, Date, Time, Integer, ForeignKey, Enum, UniqueConstraint, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base import Base
+
+
+# Many-to-Many Tabelle für Klasse-Kurs-Beziehung
+class_courses = Table(
+    'class_courses',
+    Base.metadata,
+    Column('class_id', UUID(as_uuid=True), ForeignKey('classes.id', ondelete='CASCADE'), primary_key=True),
+    Column('course_id', UUID(as_uuid=True), ForeignKey('courses.id', ondelete='CASCADE'), primary_key=True)
+)
 
 
 class SessionType(str, enum.Enum):
@@ -119,10 +128,18 @@ class Class(Base):
     # =========================================
     # Relationships
     # =========================================
-    # Kurs dieser Klasse
+    # Kurs dieser Klasse (Legacy - für Abwärtskompatibilität)
     course = relationship(
         "Course",
-        back_populates="classes"
+        back_populates="classes",
+        foreign_keys=[course_id]
+    )
+    
+    # Mehrere Kurse (Many-to-Many)
+    courses = relationship(
+        "Course",
+        secondary=class_courses,
+        backref="assigned_classes"
     )
     
     # Lehrer dieser Klasse
