@@ -338,6 +338,8 @@ async def get_lesson(
         Lesson.course_id == course.id,
         Lesson.slug == lesson_slug,
         Lesson.is_published == True
+    ).options(
+        selectinload(Lesson.homework)
     )
     lesson_result = await db.execute(lesson_query)
     lesson = lesson_result.scalar_one_or_none()
@@ -623,4 +625,3 @@ async def delete_lesson(
     
     await db.delete(lesson)
     await db.commit()
-
