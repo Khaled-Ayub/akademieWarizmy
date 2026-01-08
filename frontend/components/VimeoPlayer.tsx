@@ -362,91 +362,18 @@ export default function VimeoPlayer({
   return (
     <div 
       ref={containerRef}
-      className={`relative aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-2xl group ${className}`}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
-      tabIndex={0}
+      className={`relative aspect-video bg-gray-900 rounded-xl overflow-hidden ${className}`}
     >
-      {/* Thumbnail Preview (vor Start) */}
-      {!hasStarted && thumbnailUrl && (
-        <div className="absolute inset-0 z-10">
-          <img 
-            src={thumbnailUrl} 
-            alt={title || 'Video Thumbnail'}
-            className="w-full h-full object-cover"
-          />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
-          
-          {/* Play Button */}
-          <button
-            onClick={handleStartVideo}
-            className="absolute inset-0 flex items-center justify-center group/play"
-          >
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary-500 flex items-center justify-center shadow-lg transform transition-all duration-300 group-hover/play:scale-110 group-hover/play:bg-primary-600">
-              <Play className="w-10 h-10 md:w-12 md:h-12 text-white ml-1" fill="white" />
-            </div>
-          </button>
-          
-          {/* Video Info */}
-          {title && (
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <h3 className="text-lg md:text-xl font-bold mb-1">{title}</h3>
-              {videoDuration > 0 && (
-                <p className="text-sm text-white/80">{formatTime(videoDuration)}</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Loading Indicator */}
-      {isLoading && hasStarted && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-20">
-          <div className="text-center text-white">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
-            <p className="text-sm text-gray-400">Video wird geladen...</p>
-          </div>
-        </div>
-      )}
       
       {/* Vimeo iframe */}
       <iframe
         ref={iframeRef}
         src={embedUrl.toString()}
-        className={`w-full h-full ${!hasStarted ? 'opacity-0' : 'opacity-100'}`}
+        className="w-full h-full"
         frameBorder="0"
         allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
         title={title || 'Video Player'}
       />
-      
-      {/* Custom Progress Bar (oben) */}
-      {hasStarted && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-black/30 z-30">
-          <div 
-            className="h-full bg-primary-500 transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      )}
-      
-      {/* Keyboard Hints (unten rechts, nur beim Hover) */}
-      <div className={`absolute bottom-4 right-4 z-30 text-xs text-white/60 transition-opacity duration-300 ${showControls && hasStarted ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex items-center gap-4 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
-          <span><kbd className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">K</kbd> Play/Pause</span>
-          <span><kbd className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">←/→</kbd> ±10s</span>
-          <span><kbd className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">F</kbd> Vollbild</span>
-        </div>
-      </div>
-      
-      {/* Zeit-Anzeige (unten links) */}
-      {hasStarted && videoDuration > 0 && (
-        <div className={`absolute bottom-4 left-4 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="bg-black/40 backdrop-blur-sm rounded-lg px-3 py-1.5 text-white text-sm font-mono">
-            {formatTime(currentTime)} / {formatTime(videoDuration)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
