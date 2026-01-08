@@ -17,7 +17,7 @@ export async function PATCH(
     const token = cookieStore.get('access_token')?.value;
     const body = await request.json();
     
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/admin/announcements/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ export async function DELETE(
     const cookieStore = await cookies();
     const token = cookieStore.get('access_token')?.value;
     
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/admin/announcements/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
