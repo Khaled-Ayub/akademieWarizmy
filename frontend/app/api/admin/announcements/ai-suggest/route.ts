@@ -7,8 +7,9 @@ import { NextResponse } from 'next/server';
 
 // POST /api/admin/announcements/ai-suggest - KI-Vorschlag generieren
 export async function POST(request: Request) {
+  let body: any = {};
   try {
-    const body = await request.json();
+    body = await request.json();
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/announcements/ai-suggest`, {
       method: 'POST',
