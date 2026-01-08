@@ -289,7 +289,7 @@ async def get_user(
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
-    """Benutzer-Details abrufen"""
+    """Benutzer-Details abrufen (alle Felder)"""
     result = await db.execute(
         select(User).where(User.id == user_id)
     )
@@ -304,14 +304,25 @@ async def get_user(
         "first_name": user.first_name,
         "last_name": user.last_name,
         "phone": user.phone,
+        # Adresse
         "address_street": user.address_street,
         "address_city": user.address_city,
         "address_zip": user.address_zip,
         "address_country": user.address_country,
+        # Onboarding & Profil
+        "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
+        "newsletter_opt_in": user.newsletter_opt_in,
+        "whatsapp_opt_in": user.whatsapp_opt_in,
+        "whatsapp_channel_opt_in": user.whatsapp_channel_opt_in,
+        "onboarding_completed": user.onboarding_completed,
+        "profile_picture_url": getattr(user, 'profile_picture_url', None),
+        # Rolle & Status
         "role": user.role.value,
         "is_active": user.is_active,
         "email_verified": user.email_verified,
-        "created_at": user.created_at.isoformat(),
+        # Timestamps
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "updated_at": user.updated_at.isoformat() if user.updated_at else None,
     }
 
 
