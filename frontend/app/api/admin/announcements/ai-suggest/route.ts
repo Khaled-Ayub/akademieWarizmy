@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   let body: any = {};
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('access_token')?.value;
+    const token = cookieStore.get('warizmy_access_token')?.value;
     body = await request.json();
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements/ai-suggest`, {

@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('access_token')?.value;
+    const token = cookieStore.get('warizmy_access_token')?.value;
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements`, {
       headers: {
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('access_token')?.value;
+    const token = cookieStore.get('warizmy_access_token')?.value;
     const body = await request.json();
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements`, {

@@ -14,7 +14,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const cookieStore = await cookies();
-    const token = cookieStore.get('access_token')?.value;
+    const token = cookieStore.get('warizmy_access_token')?.value;
     const body = await request.json();
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements/${id}`, {
@@ -53,7 +53,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const cookieStore = await cookies();
-    const token = cookieStore.get('access_token')?.value;
+    const token = cookieStore.get('warizmy_access_token')?.value;
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/announcements/${id}`, {
       method: 'DELETE',
