@@ -41,10 +41,12 @@ function OnboardingInner() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Run check once on mount. Use store.getState() to avoid effect deps changing when `user` updates.
     (async () => {
-      console.log('[Onboarding] starting auth check...');
-      const ok = await checkAuth();
-      console.log('[Onboarding] checkAuth result:', ok);
+      console.log('[Onboarding] starting one-time auth check (mount)...');
+      const ok = await useAuthStore.getState().checkAuth();
+      console.log('[Onboarding] one-time checkAuth result:', ok);
       if (cancelled) return;
 
       if (!ok) {
