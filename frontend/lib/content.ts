@@ -290,22 +290,40 @@ export async function getCoursesByCategory(category: string): Promise<Course[]> 
 
 /**
  * Einzelne Lektion per Slug abrufen (inkl. Kurs-Info für Navigation)
+ * Direkter Aufruf des Backend-Endpoints für volle Daten inkl. Hausaufgaben
  */
 export async function getLessonBySlug(
   courseSlug: string,
   lessonSlug: string
 ): Promise<{ lesson: Lesson; course: Course; allLessons: Lesson[] } | null> {
   try {
-    // Erst den Kurs mit allen Lektionen laden
+    // Direkt vom Backend laden (enthält bereits Hausaufgaben durch selectinload)
+    const response = await fetch(`${API_URL}/courses/${courseSlug}/lessons/${lessonSlug}`);
+    
+    if (!response.ok) {
+      // Fallback: Kurs laden und Lektion daraus extrahieren
+      const course = await getCourseBySlug(courseSlug);
+      if (!course) return null;
+      
+      const allLessons = course.lessons || [];
+      const lesson = allLessons.find(l => l.slug === lessonSlug);
+      
+      if (!lesson) return null;
+      
+      return { lesson, course, allLessons };
+    }
+    
+    const lesson = await response.json();
+    
+    // Kurs für Navigation laden
     const course = await getCourseBySlug(courseSlug);
     if (!course) return null;
     
-    const allLessons = course.lessons || [];
-    const lesson = allLessons.find(l => l.slug === lessonSlug);
-    
-    if (!lesson) return null;
-    
-    return { lesson, course, allLessons };
+    return { 
+      lesson, 
+      course, 
+      allLessons: course.lessons || [] 
+    };
   } catch (error) {
     console.error('Error fetching lesson:', error);
     return null;
