@@ -168,9 +168,12 @@ export default function VimeoPlayer({
     
     async function fetchMetadata() {
       try {
-        // Vimeo oEmbed API für Metadaten
+        // Vimeo oEmbed API für Metadaten (mit Hash für nicht gelistete Videos)
+        const vimeoUrl = hash 
+          ? `https://vimeo.com/${id}/${hash}`
+          : `https://vimeo.com/${id}`;
         const response = await fetch(
-          `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${id}`
+          `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(vimeoUrl)}`
         );
         
         if (response.ok) {
@@ -186,7 +189,7 @@ export default function VimeoPlayer({
     }
     
     fetchMetadata();
-  }, [id]);
+  }, [id, hash]);
   
   // Iframe Message Handler für Vimeo Player Events
   useEffect(() => {
