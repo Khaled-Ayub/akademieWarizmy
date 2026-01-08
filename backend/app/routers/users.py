@@ -294,11 +294,10 @@ async def get_my_enrollments(
                 continue
             added_course_ids.add(course.id)
             
-            # Fortschritt berechnen
+            # Fortschritt berechnen (alle Lektionen, auch unveröffentlichte)
             total_result = await db.execute(
                 select(func.count(Lesson.id))
                 .where(Lesson.course_id == course.id)
-                .where(Lesson.is_published == True)
             )
             total_lessons = total_result.scalar() or 0
             
@@ -311,6 +310,8 @@ async def get_my_enrollments(
             )
             completed_lessons = completed_result.scalar() or 0
             
+            print(f"[Enrollments] Class - Course {course.title}: {completed_lessons}/{total_lessons} - user={current_user.id}")
+            
             progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
             
             # Nächste unvollendete Lektion ermitteln
@@ -320,7 +321,6 @@ async def get_my_enrollments(
                 lessons_result = await db.execute(
                     select(Lesson)
                     .where(Lesson.course_id == course.id)
-                    .where(Lesson.is_published == True)
                     .order_by(Lesson.order)
                 )
                 all_lessons = lessons_result.scalars().all()
@@ -377,11 +377,10 @@ async def get_my_enrollments(
             continue
         added_course_ids.add(e.course.id)
         
-        # Fortschritt berechnen
+        # Fortschritt berechnen (alle Lektionen, auch unveröffentlichte)
         total_result = await db.execute(
             select(func.count(Lesson.id))
             .where(Lesson.course_id == e.course.id)
-            .where(Lesson.is_published == True)
         )
         total_lessons = total_result.scalar() or 0
         
@@ -394,6 +393,8 @@ async def get_my_enrollments(
         )
         completed_lessons = completed_result.scalar() or 0
         
+        print(f"[Enrollments] Direct - Course {e.course.title}: {completed_lessons}/{total_lessons} - user={current_user.id}")
+        
         progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
         
         # Nächste unvollendete Lektion ermitteln
@@ -403,7 +404,6 @@ async def get_my_enrollments(
             lessons_result = await db.execute(
                 select(Lesson)
                 .where(Lesson.course_id == e.course.id)
-                .where(Lesson.is_published == True)
                 .order_by(Lesson.order)
             )
             all_lessons = lessons_result.scalars().all()
