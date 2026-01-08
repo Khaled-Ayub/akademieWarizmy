@@ -130,20 +130,12 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
   return (
     <div 
-      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-hidden relative z-50 shadow-lg"
+      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-visible relative z-50 shadow-lg"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Schließen-Button */}
-      <button
-        onClick={() => setIsClosed(true)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-1 hover:bg-white/20 rounded-full transition-colors"
-        aria-label="Ankündigung schließen"
-      >
-        <X className="w-4 h-4" />
-      </button>
       {/* Container für den scrollenden Text */}
-      <div className="py-2.5 whitespace-nowrap">
+      <div className="py-2.5 whitespace-nowrap flex-1">
         {/* Erster Text (scrollt) */}
         <div 
           className={`inline-block animate-marquee ${isPaused ? 'pause-animation' : ''}`}
@@ -179,7 +171,16 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
       {/* Gradient-Overlay an den Seiten für besseren Übergang */}
       <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-red-600 to-transparent pointer-events-none z-10" />
-      <div className="absolute right-8 top-0 bottom-0 w-12 bg-gradient-to-l from-red-600 to-transparent pointer-events-none z-10" />
+      <div className="absolute right-12 top-0 bottom-0 w-12 bg-gradient-to-l from-red-600 to-transparent pointer-events-none z-10" />
+      
+      {/* Schließen-Button */}
+      <button
+        onClick={() => setIsClosed(true)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-40 p-1 hover:bg-red-700 rounded-full transition-colors bg-red-600"
+        aria-label="Ankündigung schließen"
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
     </div>
   );
 }
