@@ -689,7 +689,9 @@ async def get_student_dashboard(
         result = await db.execute(
             select(func.count(LessonProgress.id))
             .where(LessonProgress.user_id == current_user.id)
-            .where(LessonProgress.course_id == course.id)
+            .where(LessonProgress.lesson_id.in_(
+                select(Lesson.id).where(Lesson.course_id == course.id)
+            ))
             .where(LessonProgress.completed == True)
         )
         completed_lessons = result.scalar() or 0
