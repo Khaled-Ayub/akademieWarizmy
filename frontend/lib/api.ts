@@ -602,6 +602,14 @@ export const dashboardApi = {
   },
 
   /**
+   * Anwesenheitsdaten abrufen
+   */
+  getAttendance: async () => {
+    const response = await api.get('/users/me/attendance');
+    return response.data;
+  },
+
+  /**
    * Lehrer-Dashboard Daten abrufen
    */
   getTeacherDashboard: async () => {

@@ -15,6 +15,7 @@ import {
   TrendingUp,
   AlertTriangle
 } from 'lucide-react';
+import { dashboardApi } from '@/lib/api';
 
 // =========================================
 // Typen
@@ -141,55 +142,26 @@ export default function AnwesenheitPage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [courses, setCourses] = useState<CourseAttendance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock-Daten laden
-    setTimeout(() => {
-      setCourses([
-        {
-          course_id: '1',
-          course_name: 'Arabisch für Anfänger',
-          total_sessions: 20,
-          attended: 17,
-          absent: 2,
-          excused: 1,
-          attendance_rate: 85,
-          required_rate: 80,
-        },
-        {
-          course_id: '2',
-          course_name: 'Quran Rezitation',
-          total_sessions: 12,
-          attended: 8,
-          absent: 2,
-          excused: 0,
-          attendance_rate: 67,
-          required_rate: 80,
-        },
-        {
-          course_id: '3',
-          course_name: 'Islamische Geschichte',
-          total_sessions: 8,
-          attended: 7,
-          absent: 0,
-          excused: 1,
-          attendance_rate: 88,
-          required_rate: 80,
-        },
-      ]);
-      
-      setRecords([
-        { id: '1', session_title: 'Lektion 20: Abschluss', course_name: 'Arabisch für Anfänger', date: '2026-01-08', time: '18:00', status: 'pending' },
-        { id: '2', session_title: 'Lektion 19: Wiederholung', course_name: 'Arabisch für Anfänger', date: '2026-01-06', time: '18:00', status: 'present' },
-        { id: '3', session_title: 'Tajweed Regel 8', course_name: 'Quran Rezitation', date: '2026-01-05', time: '19:30', status: 'present' },
-        { id: '4', session_title: 'Lektion 18: Grammatik', course_name: 'Arabisch für Anfänger', date: '2026-01-04', time: '18:00', status: 'absent' },
-        { id: '5', session_title: 'Die Hidschra Teil 2', course_name: 'Islamische Geschichte', date: '2026-01-03', time: '17:00', status: 'present' },
-        { id: '6', session_title: 'Tajweed Regel 7', course_name: 'Quran Rezitation', date: '2026-01-02', time: '19:30', status: 'excused' },
-      ]);
-      
-      setLoading(false);
-    }, 500);
+    loadAttendance();
   }, []);
+
+  const loadAttendance = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await dashboardApi.getAttendance();
+      setCourses(data.courses || []);
+      setRecords(data.records || []);
+    } catch (err) {
+      console.error('Anwesenheit laden fehlgeschlagen:', err);
+      setError('Anwesenheitsdaten konnten nicht geladen werden');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalAttendance = courses.length > 0 
     ? Math.round(courses.reduce((acc, c) => acc + c.attendance_rate, 0) / courses.length)
@@ -199,6 +171,20 @@ export default function AnwesenheitPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-600">{error}</p>
+        <button 
+          onClick={loadAttendance}
+          className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+        >
+          Erneut versuchen
+        </button>
       </div>
     );
   }
@@ -228,38 +214,51 @@ export default function AnwesenheitPage() {
       {/* Kurs-Übersicht */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Nach Kurs</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map(course => (
-            <CourseAttendanceCard key={course.course_id} course={course} />
-          ))}
-        </div>
+        {courses.length > 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {courses.map(course => (
+              <CourseAttendanceCard key={course.course_id} course={course} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">Noch keine Anwesenheitsdaten vorhanden.</p>
+          </div>
+        )}
       </div>
 
       {/* Letzte Einträge */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Letzte Sessions</h2>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="divide-y divide-gray-100">
-            {records.map(record => (
-              <div key={record.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-gray-500" />
+          {records.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {records.map(record => (
+                <div key={record.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{record.session_title}</p>
+                      <p className="text-sm text-gray-500">{record.course_name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{record.session_title}</p>
-                    <p className="text-sm text-gray-500">{record.course_name}</p>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500">
+                      {new Date(record.date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })} • {record.time}
+                    </span>
+                    <StatusBadge status={record.status} />
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-500">
-                    {new Date(record.date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })} • {record.time}
-                  </span>
-                  <StatusBadge status={record.status} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <p className="text-gray-500">Keine Sessions gefunden.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

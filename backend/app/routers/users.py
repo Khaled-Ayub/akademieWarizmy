@@ -601,6 +601,131 @@ async def get_student_dashboard(
     }
 
 
+@router.get("/me/attendance")
+async def get_my_attendance(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Anwesenheitsdaten des Schülers abrufen.
+    """
+    from sqlalchemy import func
+    from app.models import Attendance, AttendanceStatus, LiveSession
+    from app.models.class_.class_model import EnrollmentStatus
+    
+    # === Meine Klassen ===
+    result = await db.execute(
+        select(ClassEnrollment)
+        .options(selectinload(ClassEnrollment.class_).selectinload(Class.course))
+        .where(ClassEnrollment.user_id == current_user.id)
+        .where(ClassEnrollment.status == EnrollmentStatus.ACTIVE)
+    )
+    class_enrollments = result.scalars().all()
+    class_ids = [e.class_id for e in class_enrollments]
+    
+    # === Kurse mit Anwesenheit ===
+    courses = []
+    for enrollment in class_enrollments:
+        if not enrollment.class_ or not enrollment.class_.course:
+            continue
+        cls = enrollment.class_
+        course = cls.course
+        
+        # Sessions für diese Klasse zählen
+        result = await db.execute(
+            select(func.count(LiveSession.id))
+            .where(LiveSession.class_id == cls.id)
+            .where(LiveSession.is_cancelled == False)
+            .where(LiveSession.scheduled_at <= datetime.utcnow())
+        )
+        total_sessions = result.scalar() or 0
+        
+        if total_sessions == 0:
+            continue
+        
+        # Anwesenheiten zählen
+        result = await db.execute(
+            select(func.count(Attendance.id))
+            .join(LiveSession, Attendance.live_session_id == LiveSession.id)
+            .where(LiveSession.class_id == cls.id)
+            .where(Attendance.user_id == current_user.id)
+            .where(Attendance.status == AttendanceStatus.PRESENT)
+        )
+        attended = result.scalar() or 0
+        
+        result = await db.execute(
+            select(func.count(Attendance.id))
+            .join(LiveSession, Attendance.live_session_id == LiveSession.id)
+            .where(LiveSession.class_id == cls.id)
+            .where(Attendance.user_id == current_user.id)
+            .where(Attendance.status == AttendanceStatus.ABSENT_UNEXCUSED)
+        )
+        absent = result.scalar() or 0
+        
+        result = await db.execute(
+            select(func.count(Attendance.id))
+            .join(LiveSession, Attendance.live_session_id == LiveSession.id)
+            .where(LiveSession.class_id == cls.id)
+            .where(Attendance.user_id == current_user.id)
+            .where(Attendance.status == AttendanceStatus.ABSENT_EXCUSED)
+        )
+        excused = result.scalar() or 0
+        
+        attendance_rate = int((attended / total_sessions) * 100) if total_sessions > 0 else 0
+        
+        courses.append({
+            "course_id": str(course.id),
+            "course_name": course.title,
+            "total_sessions": total_sessions,
+            "attended": attended,
+            "absent": absent,
+            "excused": excused,
+            "attendance_rate": attendance_rate,
+            "required_rate": 80,
+        })
+    
+    # === Letzte Anwesenheitseinträge ===
+    records = []
+    if class_ids:
+        result = await db.execute(
+            select(Attendance)
+            .options(
+                selectinload(Attendance.live_session).selectinload(LiveSession.class_)
+            )
+            .join(LiveSession, Attendance.live_session_id == LiveSession.id)
+            .where(LiveSession.class_id.in_(class_ids))
+            .where(Attendance.user_id == current_user.id)
+            .order_by(LiveSession.scheduled_at.desc())
+            .limit(20)
+        )
+        attendances = result.scalars().all()
+        
+        for a in attendances:
+            session = a.live_session
+            if not session:
+                continue
+            
+            status_map = {
+                AttendanceStatus.PRESENT: "present",
+                AttendanceStatus.ABSENT_EXCUSED: "excused",
+                AttendanceStatus.ABSENT_UNEXCUSED: "absent",
+            }
+            
+            records.append({
+                "id": str(a.id),
+                "session_title": session.title,
+                "course_name": session.class_.name if session.class_ else "Unbekannt",
+                "date": session.scheduled_at.strftime("%Y-%m-%d"),
+                "time": session.scheduled_at.strftime("%H:%M"),
+                "status": status_map.get(a.status, "pending"),
+            })
+    
+    return {
+        "courses": courses,
+        "records": records,
+    }
+
+
 @router.get("/me/teacher-dashboard")
 async def get_teacher_dashboard(
     current_user: User = Depends(get_current_user),

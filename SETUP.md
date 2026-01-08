@@ -60,7 +60,7 @@ docker-compose -f docker-compose.dev.yml logs -f frontend
 | Service | URL |
 |---------|-----|
 | 🌐 **Frontend** | [http://localhost:3002](http://localhost:3002) |
-| ⚡ **Backend API** | [http://localhost:8000/api](http://localhost:8000/api) |
+|  **Backend API** | [http://localhost:8000/api](http://localhost:8000/api) |
 | 📚 **API Docs (Swagger)** | [http://localhost:8000/api/docs](http://localhost:8000/api/docs) |
 | 🗄️ **MinIO Console** | [http://localhost:9001](http://localhost:9001) |
 

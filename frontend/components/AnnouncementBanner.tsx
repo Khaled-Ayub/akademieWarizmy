@@ -159,8 +159,6 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
           }}
         >
           <span className="inline-flex items-center text-sm md:text-base tracking-wide font-[var(--font-poppins)]">
-            <span className="mr-3 text-lg">🔥</span>
-            <span className="mr-2 text-yellow-300">⚡</span>
             {announcementText}
             <span className="mx-12 text-white/40">✦</span>
           </span>
