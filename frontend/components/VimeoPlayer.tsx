@@ -67,8 +67,8 @@ interface VimeoOembedData {
 function extractVimeoId(input: string): string | null {
   if (!input || typeof input !== 'string') return null;
   
-  // Trim whitespace
-  input = input.trim();
+  // Trim whitespace und entferne Query-Parameter
+  input = input.trim().split('?')[0].split('#')[0];
   
   // Falls es bereits eine reine ID ist (nur Zahlen)
   if (/^\d+$/.test(input)) {
