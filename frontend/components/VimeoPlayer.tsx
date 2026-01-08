@@ -64,7 +64,10 @@ interface VimeoOembedData {
  * - vimeo.com/album/xxx/video/123456789
  * - vimeo.com/showcase/xxx/video/123456789
  */
-function extractVimeoId(input: string): string | null {
+/**
+ * Extrahiert die Vimeo Video-ID und optionalen Hash aus verschiedenen URL-Formaten
+ */
+function extractVimeoData(input: string): { id: string; hash?: string } | null {
   if (!input || typeof input !== 'string') return null;
   
   // Trim whitespace und entferne Query-Parameter
@@ -72,42 +75,38 @@ function extractVimeoId(input: string): string | null {
   
   // Falls es bereits eine reine ID ist (nur Zahlen)
   if (/^\d+$/.test(input)) {
-    return input;
+    return { id: input };
+  }
+  
+  // Privates Video mit Hash: vimeo.com/123456789/abcdef (MUSS VOR anderen Matches kommen!)
+  const privateMatch = input.match(/vimeo\.com\/(\d+)\/([a-zA-Z0-9]+)/);
+  if (privateMatch) {
+    return { id: privateMatch[1], hash: privateMatch[2] };
   }
   
   // Manage URL: vimeo.com/manage/videos/123456789
   const manageMatch = input.match(/vimeo\.com\/manage\/videos\/(\d+)/);
-  if (manageMatch) return manageMatch[1];
+  if (manageMatch) return { id: manageMatch[1] };
   
   // Player URL: player.vimeo.com/video/123456789
   const playerMatch = input.match(/player\.vimeo\.com\/video\/(\d+)/);
-  if (playerMatch) return playerMatch[1];
+  if (playerMatch) return { id: playerMatch[1] };
   
-  // Channels: vimeo.com/channels/xxx/123456789
-  const channelMatch = input.match(/vimeo\.com\/channels\/[^\/]+\/(\d+)/);
-  if (channelMatch) return channelMatch[1];
-  
-  // Groups: vimeo.com/groups/xxx/videos/123456789
-  const groupMatch = input.match(/vimeo\.com\/groups\/[^\/]+\/videos\/(\d+)/);
-  if (groupMatch) return groupMatch[1];
-  
-  // Album/Showcase: vimeo.com/album/xxx/video/123456789 or vimeo.com/showcase/xxx/video/123456789
-  const albumMatch = input.match(/vimeo\.com\/(?:album|showcase)\/[^\/]+\/video\/(\d+)/);
-  if (albumMatch) return albumMatch[1];
-  
-  // Privates Video mit Hash: vimeo.com/123456789/abcdef
-  const privateMatch = input.match(/vimeo\.com\/(\d+)\/([a-zA-Z0-9]+)/);
-  if (privateMatch) return privateMatch[1];
-  
-  // Standard Vimeo URL: vimeo.com/123456789 (muss nach privatem Match kommen!)
+  // Standard Vimeo URL: vimeo.com/123456789
   const standardMatch = input.match(/vimeo\.com\/(\d+)/);
-  if (standardMatch) return standardMatch[1];
+  if (standardMatch) return { id: standardMatch[1] };
   
   // Fallback: Versuche irgendeine Zahl zu finden die wie eine Vimeo-ID aussieht (8-12 Stellen)
   const fallbackMatch = input.match(/(\d{7,12})/);
-  if (fallbackMatch) return fallbackMatch[1];
+  if (fallbackMatch) return { id: fallbackMatch[1] };
   
   return null;
+}
+
+// Legacy-Funktion für Kompatibilität
+function extractVimeoId(input: string): string | null {
+  const data = extractVimeoData(input);
+  return data?.id || null;
 }
 
 /**
@@ -135,20 +134,18 @@ export default function VimeoPlayer({
   initialProgress = 0,
   className = '',
 }: VimeoPlayerProps) {
-  // Video-ID ermitteln
-  const id = videoId || (videoUrl ? extractVimeoId(videoUrl) : null);
+  // Video-ID und Hash ermitteln
+  const vimeoData = videoUrl ? extractVimeoData(videoUrl) : null;
+  const id = videoId || vimeoData?.id || null;
+  const hash = vimeoData?.hash || null;
   
   // Debug-Output (nur in Entwicklung)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[VimeoPlayer] Props:', { videoId, videoUrl });
-      console.log('[VimeoPlayer] Extracted ID:', id);
-      
-      if (!id && videoUrl) {
-        console.error('[VimeoPlayer] Konnte keine Video-ID extrahieren aus:', videoUrl);
-      }
+      console.log('[VimeoPlayer] Extracted:', { id, hash });
     }
-  }, [videoId, videoUrl, id]);
+  }, [videoId, videoUrl, id, hash]);
   
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -340,6 +337,8 @@ export default function VimeoPlayer({
   
   // Vimeo Embed URL mit Optionen
   const embedUrl = new URL(`https://player.vimeo.com/video/${id}`);
+  // Hash für private Videos
+  if (hash) embedUrl.searchParams.set('h', hash);
   embedUrl.searchParams.set('badge', '0');
   embedUrl.searchParams.set('autopause', '0');
   embedUrl.searchParams.set('player_id', '0');
