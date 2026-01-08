@@ -5,6 +5,7 @@
 
 from typing import List, Optional
 from datetime import datetime
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -35,7 +36,7 @@ class AnnouncementUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 class AnnouncementResponse(BaseModel):
-    id: int
+    id: UUID
     title: str
     content: str
     is_active: bool
@@ -106,7 +107,7 @@ async def create_announcement(
 
 @router.patch("/announcements/{id}", response_model=AnnouncementResponse)
 async def update_announcement(
-    id: int,
+    id: UUID,
     data: AnnouncementUpdate,
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     db: AsyncSession = Depends(get_db)
@@ -137,7 +138,7 @@ async def update_announcement(
 
 @router.delete("/announcements/{id}")
 async def delete_announcement(
-    id: int,
+    id: UUID,
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
