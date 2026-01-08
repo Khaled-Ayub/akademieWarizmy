@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LogOut, LayoutDashboard, User } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, User, ChevronDown, BookOpen, Settings, Award } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import Logo from './Logo';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isAuthenticated, logout, checkAuth } = useAuthStore();
   const pathname = usePathname();
 
@@ -66,7 +67,8 @@ export default function Navbar() {
           {/* Auth Buttons / User Menu */}
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated && user ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                {/* Dashboard Button bleibt im Menü */}
                 <Link 
                   href={dashboardHref}
                   className="flex items-center gap-2 text-gray-600 hover:text-primary-500 font-medium transition-colors"
@@ -74,14 +76,112 @@ export default function Navbar() {
                   <LayoutDashboard className="w-5 h-5" />
                   <span>Dashboard</span>
                 </Link>
-                <div className="h-6 w-px bg-gray-200" />
-                <button
-                  onClick={() => logout()}
-                  className="flex items-center gap-2 text-gray-600 hover:text-red-500 font-medium transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span className="sr-only sm:not-sr-only">Abmelden</span>
-                </button>
+                
+                {/* Profil Dropdown Menü */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                      <span className="text-sm font-medium text-primary-600">
+                        {user.first_name?.[0]}{user.last_name?.[0]}
+                      </span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  {showUserMenu && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowUserMenu(false)}
+                      />
+                      <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                        {/* User Info Header */}
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                              <span className="text-base font-medium text-primary-600">
+                                {user.first_name?.[0]}{user.last_name?.[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {user.first_name} {user.last_name}
+                              </p>
+                              <p className="text-sm text-gray-500">{user.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                              {user.role === 'teacher' ? 'Lehrer' : 'Schüler'}
+                            </span>
+                            {user.email_verified && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Verifiziert
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <div className="py-1">
+                          <Link
+                            href="/dashboard/profil"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span>Profil bearbeiten</span>
+                          </Link>
+                          
+                          <Link
+                            href="/dashboard/meine-kurse"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <BookOpen className="w-4 h-4 text-gray-500" />
+                            <span>Meine Kurse</span>
+                          </Link>
+                          
+                          <Link
+                            href="/dashboard/zertifikate"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <Award className="w-4 h-4 text-gray-500" />
+                            <span>Zertifikate</span>
+                          </Link>
+                          
+                          <Link
+                            href="/dashboard/einstellungen"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <Settings className="w-4 h-4 text-gray-500" />
+                            <span>Einstellungen</span>
+                          </Link>
+                        </div>
+                        
+                        <div className="border-t border-gray-100 pt-1">
+                          <button
+                            onClick={() => {
+                              logout();
+                              setShowUserMenu(false);
+                            }}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Abmelden</span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             ) : (
               <>
