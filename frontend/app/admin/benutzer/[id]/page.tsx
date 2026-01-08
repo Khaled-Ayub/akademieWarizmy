@@ -23,13 +23,51 @@ import {
   Loader2,
   Edit,
   Save,
-  X
+  X,
+  GraduationCap,
+  BookOpen,
+  TrendingUp,
+  Clock,
+  CheckSquare,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 // =========================================
 // Types
 // =========================================
+interface ClassInfo {
+  id: string;
+  name: string;
+  status: string;
+  enrollment_type: string;
+  started_at: string | null;
+}
+
+interface CourseInfo {
+  id: string;
+  title: string;
+  slug: string;
+  total_lessons: number;
+  completed_lessons: number;
+  progress: number;
+}
+
+interface AttendanceStats {
+  total_sessions: number;
+  attended: number;
+  excused: number;
+  unexcused: number;
+  rate: number;
+}
+
+interface Stats {
+  class_count: number;
+  course_count: number;
+  total_progress: number;
+  attendance: AttendanceStats;
+}
+
 interface UserDetail {
   id: string;
   email: string;
@@ -55,6 +93,10 @@ interface UserDetail {
   // Timestamps
   created_at: string | null;
   updated_at: string | null;
+  // Lernstatistiken
+  classes: ClassInfo[];
+  courses: CourseInfo[];
+  stats: Stats;
 }
 
 const roleLabels: Record<string, string> = {
@@ -293,6 +335,135 @@ export default function UserDetailPage() {
 
       {/* Detail-Karten Grid */}
       <div className="grid md:grid-cols-2 gap-6">
+        {/* === LERNSTATISTIKEN === */}
+        {user.stats && (
+          <>
+            {/* Übersicht Stats */}
+            <div className="md:col-span-2 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl p-6 text-white">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Lernstatistiken
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white/10 rounded-lg p-4">
+                  <p className="text-white/70 text-sm">Klassen</p>
+                  <p className="text-2xl font-bold">{user.stats.class_count}</p>
+                </div>
+                <div className="bg-white/10 rounded-lg p-4">
+                  <p className="text-white/70 text-sm">Kurse</p>
+                  <p className="text-2xl font-bold">{user.stats.course_count}</p>
+                </div>
+                <div className="bg-white/10 rounded-lg p-4">
+                  <p className="text-white/70 text-sm">Gesamtfortschritt</p>
+                  <p className="text-2xl font-bold">{user.stats.total_progress}%</p>
+                </div>
+                <div className="bg-white/10 rounded-lg p-4">
+                  <p className="text-white/70 text-sm">Anwesenheit</p>
+                  <p className="text-2xl font-bold">{user.stats.attendance.rate}%</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Klassen */}
+            <InfoCard title="Eingeschriebene Klassen" icon={GraduationCap}>
+              {user.classes && user.classes.length > 0 ? (
+                <div className="space-y-3">
+                  {user.classes.map((cls) => (
+                    <div key={cls.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900">{cls.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {cls.enrollment_type === 'one_time' ? 'Einmalzahlung' : 'Abo'}
+                          {cls.started_at && ` • Seit ${formatDate(cls.started_at)}`}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        cls.status === 'active' ? 'bg-green-100 text-green-700' :
+                        cls.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {cls.status === 'active' ? 'Aktiv' : cls.status === 'cancelled' ? 'Storniert' : cls.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">Keine Klassen zugewiesen</p>
+              )}
+            </InfoCard>
+
+            {/* Kurse mit Fortschritt */}
+            <InfoCard title="Kurse & Fortschritt" icon={BookOpen}>
+              {user.courses && user.courses.length > 0 ? (
+                <div className="space-y-3">
+                  {user.courses.map((course) => (
+                    <div key={course.id} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-gray-900">{course.title}</p>
+                        <span className="text-sm font-medium text-primary-600">{course.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-primary-500 h-2 rounded-full transition-all"
+                          style={{ width: `${course.progress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {course.completed_lessons} von {course.total_lessons} Lektionen abgeschlossen
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">Keine Kurse zugewiesen</p>
+              )}
+            </InfoCard>
+
+            {/* Anwesenheit */}
+            <InfoCard title="Anwesenheitsstatistik" icon={Clock}>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4 text-green-600" />
+                    <span className="text-gray-700">Anwesend</span>
+                  </div>
+                  <span className="font-semibold text-green-700">{user.stats.attendance.attended}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                    <span className="text-gray-700">Entschuldigt</span>
+                  </div>
+                  <span className="font-semibold text-yellow-700">{user.stats.attendance.excused}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-red-600" />
+                    <span className="text-gray-700">Unentschuldigt</span>
+                  </div>
+                  <span className="font-semibold text-red-700">{user.stats.attendance.unexcused}</span>
+                </div>
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Gesamt Sessions</span>
+                    <span className="font-medium">{user.stats.attendance.total_sessions}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-gray-500">Anwesenheitsquote</span>
+                    <span className={`font-bold ${
+                      user.stats.attendance.rate >= 80 ? 'text-green-600' :
+                      user.stats.attendance.rate >= 60 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {user.stats.attendance.rate}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </InfoCard>
+          </>
+        )}
+
         {/* Persönliche Daten */}
         <InfoCard title="Persönliche Daten" icon={User}>
           <div className="space-y-1">

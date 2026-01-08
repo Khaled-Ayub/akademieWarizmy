@@ -18,13 +18,26 @@ import {
   UserX,
   Download,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 // =========================================
 // Types
 // =========================================
+interface ClassInfo {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface CourseInfo {
+  id: string;
+  title: string;
+}
+
 interface User {
   id: string;
   email: string;
@@ -34,6 +47,10 @@ interface User {
   is_active: boolean;
   email_verified: boolean;
   created_at: string;
+  classes: ClassInfo[];
+  courses: CourseInfo[];
+  class_count: number;
+  course_count: number;
 }
 
 const roleLabels: Record<string, string> = {
@@ -75,6 +92,42 @@ function UserRow({ user, onAction }: { user: User; onAction: (action: string, us
         </span>
       </td>
       <td className="py-4 px-4">
+        {/* Klassen */}
+        {user.classes && user.classes.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {user.classes.slice(0, 2).map((cls) => (
+              <span key={cls.id} className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                <GraduationCap className="w-3 h-3" />
+                {cls.name}
+              </span>
+            ))}
+            {user.classes.length > 2 && (
+              <span className="text-xs text-gray-500">+{user.classes.length - 2}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-gray-400">Keine Klassen</span>
+        )}
+      </td>
+      <td className="py-4 px-4">
+        {/* Kurse */}
+        {user.courses && user.courses.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {user.courses.slice(0, 2).map((course) => (
+              <span key={course.id} className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                <BookOpen className="w-3 h-3" />
+                {course.title.length > 20 ? course.title.substring(0, 20) + '...' : course.title}
+              </span>
+            ))}
+            {user.courses.length > 2 && (
+              <span className="text-xs text-gray-500">+{user.courses.length - 2}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-gray-400">Keine Kurse</span>
+        )}
+      </td>
+      <td className="py-4 px-4">
         <div className="flex items-center gap-2">
           {user.is_active ? (
             <span className="flex items-center gap-1 text-green-600 text-sm">
@@ -88,13 +141,6 @@ function UserRow({ user, onAction }: { user: User; onAction: (action: string, us
             </span>
           )}
         </div>
-      </td>
-      <td className="py-4 px-4">
-        {user.email_verified ? (
-          <span className="text-green-600 text-sm">✓ Verifiziert</span>
-        ) : (
-          <span className="text-orange-600 text-sm">Ausstehend</span>
-        )}
       </td>
       <td className="py-4 px-4 text-sm text-gray-500">
         {new Date(user.created_at).toLocaleDateString('de-DE')}
@@ -291,8 +337,9 @@ export default function AdminUsersPage() {
                 <tr>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Benutzer</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Rolle</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Klassen</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Kurse</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">E-Mail</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm">Registriert</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 text-sm w-12"></th>
                 </tr>

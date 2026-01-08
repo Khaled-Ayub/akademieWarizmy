@@ -224,7 +224,7 @@ async def list_users(
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
-    """Alle Benutzer auflisten"""
+    """Alle Benutzer auflisten mit Klassen und Kursen"""
     query = select(User)
     
     if role:
@@ -242,8 +242,35 @@ async def list_users(
     result = await db.execute(query)
     users = result.scalars().all()
     
-    return [
-        {
+    # Für jeden Benutzer Klassen und Kurse laden
+    user_list = []
+    for u in users:
+        # Klassen-Einschreibungen mit Kursen laden
+        enrollments_result = await db.execute(
+            select(ClassEnrollment)
+            .options(
+                selectinload(ClassEnrollment.class_).selectinload(Class.courses)
+            )
+            .where(ClassEnrollment.user_id == u.id)
+        )
+        enrollments = enrollments_result.scalars().all()
+        
+        # Klassen und Kurse extrahieren
+        classes = []
+        courses_set = set()
+        for e in enrollments:
+            if e.class_:
+                classes.append({
+                    "id": str(e.class_.id),
+                    "name": e.class_.name,
+                    "status": e.status.value
+                })
+                for c in e.class_.courses:
+                    courses_set.add((str(c.id), c.title))
+        
+        courses = [{"id": cid, "title": ctitle} for cid, ctitle in courses_set]
+        
+        user_list.append({
             "id": str(u.id),
             "email": u.email,
             "first_name": u.first_name,
@@ -251,9 +278,13 @@ async def list_users(
             "role": u.role.value,
             "is_active": u.is_active,
             "created_at": u.created_at.isoformat(),
-        }
-        for u in users
-    ]
+            "classes": classes,
+            "courses": courses,
+            "class_count": len(classes),
+            "course_count": len(courses),
+        })
+    
+    return user_list
 
 
 @router.post("/users")
@@ -295,7 +326,10 @@ async def get_user(
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
-    """Benutzer-Details abrufen (alle Felder)"""
+    """Benutzer-Details mit Lernstatistiken abrufen"""
+    from app.models import LessonProgress, Lesson
+    from app.models.class_.class_model import EnrollmentStatus
+    
     result = await db.execute(
         select(User).where(User.id == user_id)
     )
@@ -303,6 +337,112 @@ async def get_user(
     
     if not user:
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    # === Klassen-Einschreibungen mit Kursen laden ===
+    enrollments_result = await db.execute(
+        select(ClassEnrollment)
+        .options(
+            selectinload(ClassEnrollment.class_).selectinload(Class.courses)
+        )
+        .where(ClassEnrollment.user_id == user_id)
+    )
+    enrollments = enrollments_result.scalars().all()
+    
+    # Klassen und Kurse extrahieren
+    classes = []
+    courses_list = []
+    course_ids = set()
+    class_ids = []
+    
+    for e in enrollments:
+        if e.class_:
+            class_ids.append(e.class_.id)
+            classes.append({
+                "id": str(e.class_.id),
+                "name": e.class_.name,
+                "status": e.status.value,
+                "enrollment_type": e.enrollment_type,
+                "started_at": e.started_at.isoformat() if e.started_at else None,
+            })
+            for c in e.class_.courses:
+                if c.id not in course_ids:
+                    course_ids.add(c.id)
+                    courses_list.append({
+                        "id": str(c.id),
+                        "title": c.title,
+                        "slug": c.slug
+                    })
+    
+    # === Fortschritt pro Kurs berechnen ===
+    courses_with_progress = []
+    for course in courses_list:
+        cid = course["id"]
+        # Gesamtlektionen
+        total_result = await db.execute(
+            select(func.count(Lesson.id))
+            .where(Lesson.course_id == cid)
+            .where(Lesson.is_published == True)
+        )
+        total_lessons = total_result.scalar() or 0
+        
+        # Abgeschlossene Lektionen
+        completed_result = await db.execute(
+            select(func.count(LessonProgress.id))
+            .where(LessonProgress.user_id == user_id)
+            .where(LessonProgress.course_id == cid)
+            .where(LessonProgress.completed == True)
+        )
+        completed_lessons = completed_result.scalar() or 0
+        
+        progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        
+        courses_with_progress.append({
+            **course,
+            "total_lessons": total_lessons,
+            "completed_lessons": completed_lessons,
+            "progress": progress,
+        })
+    
+    # === Anwesenheitsstatistik berechnen ===
+    # Alle Sessions der Klassen des Benutzers
+    total_sessions = 0
+    attended_sessions = 0
+    excused_absences = 0
+    unexcused_absences = 0
+    
+    if class_ids:
+        # Vergangene Sessions zählen
+        sessions_result = await db.execute(
+            select(func.count(LiveSession.id))
+            .where(LiveSession.class_id.in_(class_ids))
+            .where(LiveSession.scheduled_at < datetime.utcnow())
+            .where(LiveSession.is_cancelled == False)
+        )
+        total_sessions = sessions_result.scalar() or 0
+        
+        # Anwesenheiten zählen
+        attendance_result = await db.execute(
+            select(Attendance)
+            .join(LiveSession, Attendance.live_session_id == LiveSession.id)
+            .where(Attendance.user_id == user_id)
+            .where(LiveSession.class_id.in_(class_ids))
+        )
+        attendances = attendance_result.scalars().all()
+        
+        for a in attendances:
+            if a.status == AttendanceStatus.PRESENT:
+                attended_sessions += 1
+            elif a.status == AttendanceStatus.ABSENT_EXCUSED:
+                excused_absences += 1
+            elif a.status == AttendanceStatus.ABSENT_UNEXCUSED:
+                unexcused_absences += 1
+    
+    attendance_rate = int((attended_sessions / total_sessions) * 100) if total_sessions > 0 else 0
+    
+    # === Gesamtfortschritt berechnen ===
+    total_progress = 0
+    if courses_with_progress:
+        total_progress = int(sum(c["progress"] for c in courses_with_progress) / len(courses_with_progress))
     
     return {
         "id": str(user.id),
@@ -329,6 +469,21 @@ async def get_user(
         # Timestamps
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+        # === Lernstatistiken ===
+        "classes": classes,
+        "courses": courses_with_progress,
+        "stats": {
+            "class_count": len(classes),
+            "course_count": len(courses_with_progress),
+            "total_progress": total_progress,
+            "attendance": {
+                "total_sessions": total_sessions,
+                "attended": attended_sessions,
+                "excused": excused_absences,
+                "unexcused": unexcused_absences,
+                "rate": attendance_rate,
+            }
+        }
     }
 
 

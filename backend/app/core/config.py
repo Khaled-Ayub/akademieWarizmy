@@ -94,7 +94,7 @@ class Settings(BaseSettings):
     # =========================================
     # CORS (Cross-Origin Resource Sharing)
     # =========================================
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3002,https://ac.warizmyacademy.de"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3002,https://ac.warizmyacademy.de,https://warizmyakademienew.vercel.app,https://warizmyacademy.de,https://www.warizmyacademy.de"
     
     # =========================================
     # Frontend URLs (für E-Mail-Links)
