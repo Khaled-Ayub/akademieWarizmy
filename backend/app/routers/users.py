@@ -4,6 +4,7 @@
 # Benutzer-Endpunkte (Profil, Kurse, Fortschritt)
 
 from typing import List, Optional
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -106,7 +107,6 @@ class EnrollmentResponse(BaseModel):
 class LessonProgressResponse(BaseModel):
     """Schema für Lektions-Fortschritt"""
     lesson_id: int
-    course_id: int
     watched_seconds: int
     completed: bool
     completed_at: Optional[datetime]
@@ -304,8 +304,9 @@ async def get_my_enrollments(
             
             completed_result = await db.execute(
                 select(func.count(LessonProgress.id))
+                .join(Lesson, LessonProgress.lesson_id == Lesson.id)
                 .where(LessonProgress.user_id == current_user.id)
-                .where(LessonProgress.course_id == course.id)
+                .where(Lesson.course_id == course.id)
                 .where(LessonProgress.completed == True)
             )
             completed_lessons = completed_result.scalar() or 0
@@ -353,8 +354,9 @@ async def get_my_enrollments(
         
         completed_result = await db.execute(
             select(func.count(LessonProgress.id))
+            .join(Lesson, LessonProgress.lesson_id == Lesson.id)
             .where(LessonProgress.user_id == current_user.id)
-            .where(LessonProgress.course_id == e.course.id)
+            .where(Lesson.course_id == e.course.id)
             .where(LessonProgress.completed == True)
         )
         completed_lessons = completed_result.scalar() or 0
@@ -383,7 +385,7 @@ async def get_my_enrollments(
 
 @router.get("/me/progress", response_model=List[LessonProgressResponse])
 async def get_my_progress(
-    course_id: Optional[int] = None,
+    course_id: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -392,10 +394,15 @@ async def get_my_progress(
     
     Optional nach Kurs filtern.
     """
-    query = select(LessonProgress).where(LessonProgress.user_id == current_user.id)
+    query = select(LessonProgress).options(
+        selectinload(LessonProgress.lesson)
+    ).where(LessonProgress.user_id == current_user.id)
     
     if course_id:
-        query = query.where(LessonProgress.course_id == course_id)
+        # Join mit Lesson um nach course_id zu filtern
+        query = query.join(Lesson, LessonProgress.lesson_id == Lesson.id).where(
+            Lesson.course_id == uuid.UUID(course_id)
+        )
     
     result = await db.execute(query)
     progress = result.scalars().all()
@@ -403,7 +410,6 @@ async def get_my_progress(
     return [
         LessonProgressResponse(
             lesson_id=p.lesson_id,
-            course_id=p.course_id,
             watched_seconds=p.watched_seconds,
             completed=p.completed,
             completed_at=p.completed_at,
