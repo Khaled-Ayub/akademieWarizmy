@@ -174,7 +174,8 @@ export const useAuthStore = create<AuthState>()(
        */
       checkAuth: async () => {
         const token = getAccessToken();
-        
+        console.log('[authStore.checkAuth] token present?', !!token);
+
         if (!token) {
           set({ 
             user: null, 
@@ -182,11 +183,14 @@ export const useAuthStore = create<AuthState>()(
           });
           return false;
         }
-        
+
         try {
+          console.log('[authStore.checkAuth] fetching user via fetchUser()');
           await get().fetchUser();
+          console.log('[authStore.checkAuth] fetchUser succeeded, user:', get().user);
           return true;
-        } catch {
+        } catch (err) {
+          console.error('[authStore.checkAuth] fetchUser failed:', err);
           return false;
         }
       },

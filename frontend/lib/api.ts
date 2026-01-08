@@ -256,9 +256,13 @@ export const authApi = {
    * Aktuellen Benutzer abrufen
    */
   getMe: async () => {
+    console.log('[authApi.getMe] fetching /api/auth/me');
     const res = await fetch('/api/auth/me');
+    console.log('[authApi.getMe] response status:', res.status);
     const json = await res.json().catch(() => ({}));
+    console.log('[authApi.getMe] response body:', json);
     if (!res.ok) {
+      console.error('[authApi.getMe] not ok:', json?.detail || res.status);
       throw new Error(json?.detail || 'Not authenticated');
     }
     return json;

@@ -42,7 +42,9 @@ function OnboardingInner() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      console.log('[Onboarding] starting auth check...');
       const ok = await checkAuth();
+      console.log('[Onboarding] checkAuth result:', ok);
       if (cancelled) return;
 
       if (!ok) {
