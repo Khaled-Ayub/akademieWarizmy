@@ -28,18 +28,27 @@ export default function LessonAccessCheck({
   isFreePreview,
   children
 }: LessonAccessCheckProps) {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading: authLoading, checkAuth } = useAuthStore();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Erst Auth prüfen
+  useEffect(() => {
+    const initAuth = async () => {
+      await checkAuth();
+      setAuthChecked(true);
+    };
+    initAuth();
+  }, [checkAuth]);
 
   useEffect(() => {
-    checkAccess();
-  }, [user, courseId, authLoading]);
+    if (authChecked) {
+      checkAccess();
+    }
+  }, [authChecked, user, courseId]);
 
   const checkAccess = async () => {
-    // Warte bis Auth geladen ist
-    if (authLoading) return;
-
     // Free Preview oder erste Lektion = immer zugänglich
     if (isFreePreview || lessonIndex === 0) {
       setHasAccess(true);
@@ -57,9 +66,14 @@ export default function LessonAccessCheck({
     try {
       // Prüfe Einschreibung
       const enrollments = await usersApi.getMyEnrollments();
+      console.log('Access Check Debug:', { 
+        courseId, 
+        enrollments: enrollments.map((e: any) => ({ id: e.course?.id, title: e.course?.title })),
+      });
       const enrolled = enrollments.some(
         (e: any) => String(e.course?.id).toLowerCase() === String(courseId).toLowerCase()
       );
+      console.log('Is enrolled:', enrolled);
       setHasAccess(enrolled);
     } catch (error) {
       console.error('Zugriffsprüfung fehlgeschlagen:', error);
@@ -70,7 +84,7 @@ export default function LessonAccessCheck({
   };
 
   // Ladezustand
-  if (loading || authLoading) {
+  if (loading || !authChecked) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent" />

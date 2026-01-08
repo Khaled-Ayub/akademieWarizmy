@@ -335,7 +335,7 @@ async def get_my_enrollments(
         select(Enrollment)
         .options(selectinload(Enrollment.course))
         .where(Enrollment.user_id == current_user.id)
-        .where(Enrollment.status == "active")
+        .where(Enrollment.status == EnrollmentStatus.ACTIVE)
     )
     direct_enrollments = direct_result.scalars().all()
     
