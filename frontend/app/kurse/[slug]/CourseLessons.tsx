@@ -130,11 +130,6 @@ export default function CourseLessons({ courseId, courseSlug, lessons }: CourseL
                   <h3 className="font-medium text-gray-900 group-hover:text-primary-700">
                     {lesson.title}
                   </h3>
-                  {lesson.duration_minutes && (
-                    <span className="text-sm text-gray-500">
-                      {lesson.duration_minutes} Min.
-                    </span>
-                  )}
                 </div>
                 {lesson.is_free_preview && !isEnrolled && (
                   <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
@@ -156,11 +151,6 @@ export default function CourseLessons({ courseId, courseSlug, lessons }: CourseL
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-600">{lesson.title}</h3>
-                  {lesson.duration_minutes && (
-                    <span className="text-sm text-gray-400">
-                      {lesson.duration_minutes} Min.
-                    </span>
-                  )}
                 </div>
                 <Lock className="w-5 h-5 text-gray-400" />
               </div>

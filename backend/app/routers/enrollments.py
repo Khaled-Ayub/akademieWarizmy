@@ -15,6 +15,7 @@ from app.models import (
     User,
     Enrollment,
     LessonProgress,
+    Lesson,
     EnrollmentType,
     EnrollmentStatus,
 )
@@ -120,8 +121,7 @@ async def cancel_enrollment(
 
 @router.post("/progress/lesson/{lesson_id}")
 async def update_lesson_progress(
-    lesson_id: int,
-    course_id: int,
+    lesson_id: str,
     progress_data: LessonProgressUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -129,19 +129,29 @@ async def update_lesson_progress(
     """
     Lektions-Fortschritt aktualisieren.
     """
+    from uuid import UUID
+    
+    # lesson_id in UUID umwandeln
+    try:
+        lesson_uuid = UUID(lesson_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ungültige Lektions-ID"
+        )
+    
     # Existierenden Fortschritt suchen oder neuen erstellen
     result = await db.execute(
         select(LessonProgress)
         .where(LessonProgress.user_id == current_user.id)
-        .where(LessonProgress.lesson_id == lesson_id)
+        .where(LessonProgress.lesson_id == lesson_uuid)
     )
     progress = result.scalar_one_or_none()
     
     if not progress:
         progress = LessonProgress(
             user_id=current_user.id,
-            lesson_id=lesson_id,
-            course_id=course_id,
+            lesson_id=lesson_uuid,
         )
         db.add(progress)
     
@@ -158,8 +168,7 @@ async def update_lesson_progress(
     await db.refresh(progress)
     
     return {
-        "lesson_id": progress.lesson_id,
-        "course_id": progress.course_id,
+        "lesson_id": str(progress.lesson_id),
         "watched_seconds": progress.watched_seconds,
         "completed": progress.completed,
         "completed_at": progress.completed_at.isoformat() if progress.completed_at else None,
@@ -168,8 +177,7 @@ async def update_lesson_progress(
 
 @router.post("/progress/quiz/{lesson_id}", response_model=QuizResult)
 async def submit_quiz(
-    lesson_id: int,
-    course_id: int,
+    lesson_id: str,
     submission: QuizSubmission,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -179,6 +187,17 @@ async def submit_quiz(
     
     TODO: Quiz-Daten aus der Datenbank laden und auswerten.
     """
+    from uuid import UUID
+    
+    # lesson_id in UUID umwandeln
+    try:
+        lesson_uuid = UUID(lesson_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ungültige Lektions-ID"
+        )
+    
     # TODO: Quiz aus Datenbank laden
     # quiz = await db.get_quiz(lesson_id)
     
@@ -192,15 +211,14 @@ async def submit_quiz(
     result = await db.execute(
         select(LessonProgress)
         .where(LessonProgress.user_id == current_user.id)
-        .where(LessonProgress.lesson_id == lesson_id)
+        .where(LessonProgress.lesson_id == lesson_uuid)
     )
     progress = result.scalar_one_or_none()
     
     if not progress:
         progress = LessonProgress(
             user_id=current_user.id,
-            lesson_id=lesson_id,
-            course_id=course_id,
+            lesson_id=lesson_uuid,
         )
         db.add(progress)
     
@@ -219,17 +237,30 @@ async def submit_quiz(
 
 @router.get("/progress/course/{course_id}")
 async def get_course_progress(
-    course_id: int,
+    course_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Gesamtfortschritt für einen Kurs abrufen.
     """
+    from uuid import UUID
+    
+    # course_id in UUID umwandeln
+    try:
+        course_uuid = UUID(course_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ungültige Kurs-ID"
+        )
+    
+    # LessonProgress über JOIN mit Lesson nach course_id filtern
     result = await db.execute(
         select(LessonProgress)
+        .join(Lesson, LessonProgress.lesson_id == Lesson.id)
         .where(LessonProgress.user_id == current_user.id)
-        .where(LessonProgress.course_id == course_id)
+        .where(Lesson.course_id == course_uuid)
     )
     progress_list = result.scalars().all()
     
@@ -246,7 +277,7 @@ async def get_course_progress(
         "completion_percentage": int((completed_lessons / total_lessons * 100)) if total_lessons > 0 else 0,
         "lessons": [
             {
-                "lesson_id": p.lesson_id,
+                "lesson_id": str(p.lesson_id),
                 "watched_seconds": p.watched_seconds,
                 "completed": p.completed,
                 "quiz_score": p.quiz_score,

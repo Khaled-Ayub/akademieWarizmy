@@ -5,6 +5,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ChevronLeft,
@@ -13,6 +14,7 @@ import {
   FileText,
   Download,
   CheckCircle,
+  CheckCircle2,
   Clock,
   List,
   ClipboardList,
@@ -20,8 +22,10 @@ import {
   Video,
   File,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { getMediaUrl, Lesson } from '@/lib/content';
+import { usersApi } from '@/lib/api';
 import VimeoPlayer from '@/components/VimeoPlayer';
 import LessonNavbar from '@/components/LessonNavbar';
 import LessonAccessCheck from './LessonAccessCheck';
@@ -86,10 +90,9 @@ function LessonsSidebar({
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {lesson.duration_minutes && (
-                    <p className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {lesson.duration_minutes} Min.
+                  {hasHomework && (
+                    <p className="text-xs text-amber-500 flex items-center gap-1">
+                      📝 Hausaufgabe
                     </p>
                   )}
                 </div>
@@ -242,6 +245,42 @@ export default function LessonContent({
   nextLesson,
   params
 }: LessonContentProps) {
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [isMarking, setIsMarking] = useState(false);
+
+  // Lektion beim Öffnen als besucht markieren
+  useEffect(() => {
+    const markAsVisited = async () => {
+      try {
+        // Nur wenn Lektion eine ID hat
+        if (lesson.id) {
+          await usersApi.updateLessonProgress(String(lesson.id), {
+            watched_seconds: 0 // Initial als besucht markieren
+          });
+        }
+      } catch (err) {
+        // Fehler ignorieren (z.B. wenn nicht eingeloggt)
+        console.debug('Fortschritt konnte nicht gespeichert werden:', err);
+      }
+    };
+    markAsVisited();
+  }, [lesson.id]);
+
+  // Lektion als abgeschlossen markieren
+  const handleMarkComplete = async () => {
+    if (!lesson.id || isMarking) return;
+    
+    setIsMarking(true);
+    try {
+      await usersApi.markLessonComplete(String(lesson.id));
+      setIsCompleted(true);
+    } catch (err) {
+      console.error('Fehler beim Markieren als abgeschlossen:', err);
+    } finally {
+      setIsMarking(false);
+    }
+  };
+
   return (
     <LessonAccessCheck
       courseId={course.id}
@@ -257,11 +296,14 @@ export default function LessonContent({
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Hauptinhalt */}
             <div className="lg:col-span-3 space-y-6">
-              <VimeoPlayer 
-                videoId={lesson.vimeo_video_id || undefined} 
-                videoUrl={lesson.vimeo_video_url || undefined}
-                title={lesson.title}
-              />
+              {/* Video nur anzeigen wenn vorhanden */}
+              {(lesson.vimeo_video_id || lesson.vimeo_video_url) && (
+                <VimeoPlayer 
+                  videoId={lesson.vimeo_video_id || undefined} 
+                  videoUrl={lesson.vimeo_video_url || undefined}
+                  title={lesson.title}
+                />
+              )}
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -273,12 +315,6 @@ export default function LessonContent({
                       {lesson.title}
                     </h1>
                   </div>
-                  {lesson.duration_minutes && (
-                    <div className="flex items-center gap-1.5 text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full text-sm">
-                      <Clock className="w-4 h-4" />
-                      <span>{lesson.duration_minutes} Min.</span>
-                    </div>
-                  )}
                 </div>
                 
                 {lesson.description && (
@@ -286,6 +322,29 @@ export default function LessonContent({
                     <div dangerouslySetInnerHTML={{ __html: lesson.description }} />
                   </div>
                 )}
+
+                {/* Lektion als abgeschlossen markieren Button */}
+                <div className="py-4 border-t border-gray-100">
+                  {isCompleted ? (
+                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-3 rounded-lg">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-medium">Lektion abgeschlossen!</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleMarkComplete}
+                      disabled={isMarking}
+                      className="flex items-center gap-2 px-4 py-3 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors font-medium w-full justify-center disabled:opacity-50"
+                    >
+                      {isMarking ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5" />
+                      )}
+                      Lektion als abgeschlossen markieren
+                    </button>
+                  )}
+                </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   {prevLesson ? (
@@ -320,7 +379,7 @@ export default function LessonContent({
                     </Link>
                   ) : (
                     <Link
-                      href={`/kurse/${params.slug}`}
+                      href="/dashboard/meine-kurse"
                       className="flex items-center gap-2 text-green-600 hover:text-green-700 transition-colors"
                     >
                       <CheckCircle className="w-5 h-5" />

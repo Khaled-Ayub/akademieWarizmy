@@ -349,6 +349,27 @@ export const usersApi = {
   },
 
   /**
+   * Lektions-Fortschritt aktualisieren
+   */
+  updateLessonProgress: async (lessonId: string, data: {
+    watched_seconds?: number;
+    completed?: boolean;
+  }) => {
+    const response = await api.post(`/enrollments/progress/lesson/${lessonId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Lektion als abgeschlossen markieren
+   */
+  markLessonComplete: async (lessonId: string) => {
+    const response = await api.post(`/enrollments/progress/lesson/${lessonId}`, {
+      completed: true
+    });
+    return response.data;
+  },
+
+  /**
    * Meine Zertifikate abrufen
    */
   getMyCertificates: async () => {

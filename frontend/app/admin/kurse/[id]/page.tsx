@@ -477,16 +477,6 @@ function HomeworkSection({
                 placeholder="https://vimeo.com/123456789"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
               />
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Dauer (Minuten)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.duration_minutes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || undefined }))}
-                  className="w-24 px-3 py-1.5 text-sm border border-gray-200 rounded-lg"
-                />
-              </div>
             </div>
           )}
           
@@ -635,7 +625,6 @@ function LessonModal({
     content_type: (lesson as any)?.content_type || 'video',
     // Video
     vimeo_video_url: lesson?.vimeo_video_url || '',
-    duration_minutes: lesson?.duration_minutes || 0,
     // Text
     text_content: (lesson as any)?.text_content || '',
     // PDF
@@ -889,18 +878,6 @@ function LessonModal({
                       </div>
                     </div>
                   )}
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 mb-1">Dauer (Minuten)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.duration_minutes}
-                        onChange={(e) => setFormData(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg"
-                      />
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -1068,12 +1045,6 @@ function LessonRow({
           )}
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-          {lesson.duration_minutes > 0 && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {lesson.duration_minutes} Min.
-            </span>
-          )}
           {lesson.vimeo_video_url && (
             <span className="flex items-center gap-1">
               <Play className="w-3 h-3" />
