@@ -105,22 +105,6 @@ async function HeroSection() {
               className="max-w-xl"
             />
           </div>
-          
-          {/* Stats */}
-          <div className="mt-12 grid grid-cols-3 gap-8 animate-slide-up animation-delay-300">
-            <div>
-              <div className="text-3xl font-bold text-primary-500">500+</div>
-              <div className="text-sm text-gray-600 mt-1">Studenten</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary-500">20+</div>
-              <div className="text-sm text-gray-600 mt-1">Kurse</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary-500">98%</div>
-              <div className="text-sm text-gray-600 mt-1">Zufriedenheit</div>
-            </div>
-          </div>
         </div>
       </div>
       
