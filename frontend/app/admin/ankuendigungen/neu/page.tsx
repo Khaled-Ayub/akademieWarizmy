@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft } from 'lucide-react';
+import { Save, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 export default function NewAnnouncementPage() {
@@ -18,6 +18,7 @@ export default function NewAnnouncementPage() {
     is_active: true
   });
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const router = useRouter();
   const { success, error } = useToast();
 
@@ -29,7 +30,11 @@ export default function NewAnnouncementPage() {
       const res = await fetch('/api/admin/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          title: formData.title,
+          content: formData.content,
+          is_active: formData.is_active
+        })
       });
 
       if (res.ok) {
@@ -43,6 +48,58 @@ export default function NewAnnouncementPage() {
       error('Netzwerkfehler');
     } finally {
       setLoading(false);
+    }
+  }
+
+  // KI-Vorschlag generieren
+  async function generateWithAI() {
+    if (!formData.title.trim()) {
+      error('Bitte geben Sie zuerst einen Titel ein');
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/admin/announcements/ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: formData.title,
+          language: 'de'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setFormData(prev => ({
+          ...prev,
+          content: data.suggestion
+        }));
+        success('KI-Vorschlag generiert!');
+      } else {
+        error('KI nicht verfügbar, verwende Vorlage');
+        // Fallback-Vorlage
+        setFormData(prev => ({
+          ...prev,
+          content: `⚠️ ${prev.title}
+
+[Beschreibung hier ergänzen...]
+
+Weitere Informationen folgen.`
+        }));
+      }
+    } catch (err) {
+      error('KI-Fehler, verwende Vorlage');
+      setFormData(prev => ({
+        ...prev,
+        content: `⚠️ ${prev.title}
+
+[Beschreibung hier ergänzen...]
+
+Weitere Informationen folgen.`
+      }));
+    } finally {
+      setAiLoading(false);
     }
   }
 
@@ -83,18 +140,34 @@ export default function NewAnnouncementPage() {
 
           {/* Inhalt */}
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-              Inhalt *
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="content" className="block text-sm font-medium text-gray-700">
+                Inhalt *
+              </label>
+              <button
+                type="button"
+                onClick={generateWithAI}
+                disabled={aiLoading || !formData.title.trim()}
+                className="flex items-center gap-2 text-sm bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition-all"
+              >
+                {aiLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {aiLoading ? 'Generiere...' : 'KI-Vorschlag'}
+              </button>
+            </div>
             <textarea
               id="content"
               value={formData.content}
               onChange={(e) => setFormData({...formData, content: e.target.value})}
-              rows={6}
+              rows={8}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Beschreiben Sie die Ankündigung..."
+              placeholder="Beschreiben Sie die Ankündigung... Oder klicken Sie auf 'KI-Vorschlag' nach Eingabe des Titels"
               required
             />
+            <p className="mt-1 text-xs text-gray-500">Tipp: Geben Sie zuerst einen Titel ein, dann generiert die KI einen passenden Textvorschlag.</p>
           </div>
 
           {/* Status */}

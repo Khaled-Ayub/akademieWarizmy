@@ -19,7 +19,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  MapPin
+  MapPin,
+  Bell
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ToastProvider } from '@/components/Toast';
@@ -59,6 +60,11 @@ const navItems = [
     href: '/admin/zahlungen', 
     label: 'Zahlungen', 
     icon: CreditCard,
+  },
+  { 
+    href: '/admin/ankuendigungen', 
+    label: 'Ankündigungen', 
+    icon: Bell,
   },
 ];
 

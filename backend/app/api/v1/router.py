@@ -23,6 +23,7 @@ from app.routers import (
     homework,
     locations,
 )
+from app.routers.admin_announcements import router as admin_announcements_router
 
 # Haupt-Router für API v1
 api_router = APIRouter()
@@ -140,6 +141,15 @@ api_router.include_router(
 # =========================================
 api_router.include_router(
     admin.router,
+    prefix="/admin",
+    tags=["Admin"]
+)
+
+# =========================================
+# Admin Ankündigungen
+# =========================================
+api_router.include_router(
+    admin_announcements_router,
     prefix="/admin",
     tags=["Admin"]
 )
