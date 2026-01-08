@@ -21,6 +21,7 @@ export interface User {
   whatsapp_opt_in?: boolean;
   whatsapp_channel_opt_in?: boolean;
   onboarding_completed?: boolean;
+  profile_picture_url?: string | null;
   role: 'student' | 'teacher' | 'admin';
   is_active: boolean;
   email_verified: boolean;

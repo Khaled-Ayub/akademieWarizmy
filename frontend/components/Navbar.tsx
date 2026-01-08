@@ -83,10 +83,18 @@ export default function Navbar() {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary-600">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
-                      </span>
+                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                      {user.profile_picture_url ? (
+                        <img 
+                          src={user.profile_picture_url} 
+                          alt="Profilbild" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm font-medium text-primary-600">
+                          {user.first_name?.[0]}{user.last_name?.[0]}
+                        </span>
+                      )}
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
@@ -102,10 +110,18 @@ export default function Navbar() {
                         {/* User Info Header */}
                         <div className="px-4 py-3 border-b border-gray-100">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                              <span className="text-base font-medium text-primary-600">
-                                {user.first_name?.[0]}{user.last_name?.[0]}
-                              </span>
+                            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                              {user.profile_picture_url ? (
+                                <img 
+                                  src={user.profile_picture_url} 
+                                  alt="Profilbild" 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-base font-medium text-primary-600">
+                                  {user.first_name?.[0]}{user.last_name?.[0]}
+                                </span>
+                              )}
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">
