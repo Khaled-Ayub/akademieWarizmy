@@ -20,7 +20,8 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
-  Euro
+  Euro,
+  Bell
 } from 'lucide-react';
 
 // =========================================
@@ -124,7 +125,7 @@ function QuickActions() {
     { href: '/admin/kurse/neu', label: 'Neuer Kurs', icon: Plus, color: 'bg-primary-50 text-primary-700 hover:bg-primary-100' },
     { href: '/admin/benutzer/neu', label: 'Neuer Benutzer', icon: UserPlus, color: 'bg-green-50 text-green-700 hover:bg-green-100' },
     { href: '/admin/klassen/neu', label: 'Neue Klasse', icon: Users, color: 'bg-purple-50 text-purple-700 hover:bg-purple-100' },
-    { href: '/admin/content', label: 'Inhalte verwalten', icon: BookOpen, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
+    { href: '/admin/ankuendigungen', label: 'Ankündigungen', icon: Bell, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100' },
   ];
 
   return (
@@ -296,6 +297,7 @@ export default function AdminDashboard() {
           title="Lektionen"
           value={stats.lessons}
           icon={BookOpen}
+          href="/admin/content"
           color="orange"
         />
         <StatCard
