@@ -20,7 +20,9 @@ import {
   Video,
   MapPin,
   Users,
-  Loader2
+  Loader2,
+  Bell,
+  AlertTriangle
 } from 'lucide-react';
 import { dashboardApi, sessionsApi } from '@/lib/api';
 
@@ -69,6 +71,161 @@ interface DashboardData {
   upcoming_sessions: UpcomingSession[];
   my_courses: MyCourse[];
   pvl_status: PVLStatus | null;
+}
+
+interface UnconfirmedSession {
+  id: string;
+  title: string;
+  class_name: string | null;
+  scheduled_at: string;
+  date: string;
+  time: string;
+  session_type: string;
+  location: string | null;
+  days_until: number;
+  is_today: boolean;
+  is_tomorrow: boolean;
+  is_urgent: boolean;
+}
+
+// =========================================
+// Erinnerungs-Banner für unbestätigte Sessions
+// =========================================
+function AttendanceReminderBanner({ 
+  unconfirmed, 
+  onConfirm,
+  loading 
+}: { 
+  unconfirmed: UnconfirmedSession[]; 
+  onConfirm: (id: string, attending: boolean, reason?: string) => void;
+  loading: boolean;
+}) {
+  const [showAbsenceModal, setShowAbsenceModal] = useState<string | null>(null);
+  const [absenceReason, setAbsenceReason] = useState('');
+
+  if (loading || unconfirmed.length === 0) return null;
+
+  const urgentSessions = unconfirmed.filter(s => s.is_urgent);
+  const hasUrgent = urgentSessions.length > 0;
+
+  const handleAbsence = (sessionId: string) => {
+    onConfirm(sessionId, false, absenceReason || undefined);
+    setShowAbsenceModal(null);
+    setAbsenceReason('');
+  };
+
+  return (
+    <>
+      <div className={`rounded-xl p-5 border-2 ${hasUrgent ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'} animate-pulse-slow`}>
+        <div className="flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-full ${hasUrgent ? 'bg-red-100' : 'bg-amber-100'} flex items-center justify-center flex-shrink-0`}>
+            {hasUrgent ? (
+              <AlertTriangle className={`w-6 h-6 ${hasUrgent ? 'text-red-600' : 'text-amber-600'}`} />
+            ) : (
+              <Bell className="w-6 h-6 text-amber-600" />
+            )}
+          </div>
+          <div className="flex-1">
+            <h3 className={`font-bold text-lg ${hasUrgent ? 'text-red-800' : 'text-amber-800'}`}>
+              {hasUrgent ? 'Dringende Erinnerung!' : 'Erinnerung'}: Teilnahme bestätigen
+            </h3>
+            <p className={`text-sm mt-1 ${hasUrgent ? 'text-red-700' : 'text-amber-700'}`}>
+              Du hast {unconfirmed.length} Session{unconfirmed.length > 1 ? 's' : ''} ohne Bestätigung.
+              {hasUrgent && ` ${urgentSessions.length} davon in den nächsten 2 Tagen!`}
+            </p>
+            
+            {/* Session-Liste */}
+            <div className="mt-4 space-y-3">
+              {unconfirmed.slice(0, 3).map((session) => (
+                <div 
+                  key={session.id} 
+                  className={`bg-white rounded-lg p-4 border ${session.is_urgent ? 'border-red-200' : 'border-gray-200'}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {session.is_today && (
+                          <span className="text-xs font-bold bg-red-500 text-white px-2 py-0.5 rounded-full">HEUTE</span>
+                        )}
+                        {session.is_tomorrow && (
+                          <span className="text-xs font-bold bg-orange-500 text-white px-2 py-0.5 rounded-full">MORGEN</span>
+                        )}
+                        {!session.is_today && !session.is_tomorrow && session.is_urgent && (
+                          <span className="text-xs font-medium bg-amber-500 text-white px-2 py-0.5 rounded-full">In {session.days_until} Tagen</span>
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-gray-900 truncate">{session.title}</h4>
+                      <p className="text-sm text-gray-500">
+                        {session.class_name} • {new Date(session.scheduled_at).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} • {session.time} Uhr
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button 
+                        onClick={() => onConfirm(session.id, true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Ja
+                      </button>
+                      <button 
+                        onClick={() => setShowAbsenceModal(session.id)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Nein
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {unconfirmed.length > 3 && (
+                <p className="text-sm text-gray-600 text-center pt-2">
+                  +{unconfirmed.length - 3} weitere unbestätigte Sessions
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Absage-Modal mit Grund */}
+      {showAbsenceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Absage bestätigen</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Du kannst optional einen Grund für deine Abwesenheit angeben:
+            </p>
+            <textarea
+              value={absenceReason}
+              onChange={(e) => setAbsenceReason(e.target.value)}
+              placeholder="Grund (optional)"
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm mb-4 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              rows={3}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAbsenceModal(null);
+                  setAbsenceReason('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={() => handleAbsence(showAbsenceModal)}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Absage senden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 // =========================================
@@ -319,9 +476,12 @@ export default function StudentDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [sessions, setSessions] = useState<UpcomingSession[]>([]);
+  const [unconfirmedSessions, setUnconfirmedSessions] = useState<UnconfirmedSession[]>([]);
+  const [loadingUnconfirmed, setLoadingUnconfirmed] = useState(true);
 
   useEffect(() => {
     loadDashboard();
+    loadUnconfirmed();
   }, []);
 
   const loadDashboard = async () => {
@@ -339,13 +499,27 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleConfirmAttendance = async (sessionId: string, attending: boolean) => {
+  const loadUnconfirmed = async () => {
     try {
-      await sessionsApi.confirmAttendance(sessionId, attending);
+      setLoadingUnconfirmed(true);
+      const data = await sessionsApi.getUnconfirmed();
+      setUnconfirmedSessions(data.unconfirmed || []);
+    } catch (err) {
+      console.error('Unbestätigte Sessions laden fehlgeschlagen:', err);
+    } finally {
+      setLoadingUnconfirmed(false);
+    }
+  };
+
+  const handleConfirmAttendance = async (sessionId: string, attending: boolean, reason?: string) => {
+    try {
+      await sessionsApi.confirmAttendance(sessionId, attending, reason);
       // Update local state
       setSessions(prev => prev.map(s => 
         s.id === sessionId ? { ...s, confirmed: attending } : s
       ));
+      // Entferne aus unbestätigten Sessions
+      setUnconfirmedSessions(prev => prev.filter(s => s.id !== sessionId));
     } catch (err) {
       console.error('Bestätigung fehlgeschlagen:', err);
     }
@@ -379,6 +553,13 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Erinnerungs-Banner - PROMINENT OBEN */}
+      <AttendanceReminderBanner 
+        unconfirmed={unconfirmedSessions}
+        onConfirm={handleConfirmAttendance}
+        loading={loadingUnconfirmed}
+      />
+
       {/* Begrüßung */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>

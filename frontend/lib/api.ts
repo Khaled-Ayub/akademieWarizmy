@@ -386,6 +386,14 @@ export const sessionsApi = {
   },
 
   /**
+   * Unbestätigte Sessions abrufen (für Erinnerungs-Widget)
+   */
+  getUnconfirmed: async () => {
+    const response = await api.get('/sessions/unconfirmed');
+    return response.data;
+  },
+
+  /**
    * Teilnahme bestätigen
    */
   confirmAttendance: async (sessionId: string, willAttend: boolean, absenceReason?: string) => {
@@ -401,6 +409,28 @@ export const sessionsApi = {
    */
   joinSession: async (sessionId: string) => {
     const response = await api.post(`/sessions/${sessionId}/join`);
+    return response.data;
+  },
+
+  /**
+   * Anwesenheitsliste einer Session abrufen (für Lehrer)
+   */
+  getSessionAttendance: async (sessionId: string) => {
+    const response = await api.get(`/sessions/${sessionId}/attendance`);
+    return response.data;
+  },
+
+  /**
+   * Anwesenheit für Session aktualisieren (für Lehrer)
+   */
+  updateSessionAttendance: async (sessionId: string, attendances: Array<{
+    user_id: string;
+    status: 'present' | 'absent_excused' | 'absent_unexcused';
+    notes?: string;
+  }>) => {
+    const response = await api.post(`/sessions/${sessionId}/attendance`, {
+      attendances,
+    });
     return response.data;
   },
 };
