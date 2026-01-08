@@ -28,6 +28,9 @@ import Navbar from '@/components/Navbar';
 // Vimeo Player für Vorschau-Video
 import VimeoPlayer from '@/components/VimeoPlayer';
 
+// Client Component für Lektionen mit Zugriffskontrolle
+import CourseLessons from './CourseLessons';
+
 // Statische Pfade generieren (für SSG)
 export async function generateStaticParams() {
   const courses = await getCourses();
@@ -182,44 +185,13 @@ export default async function KursDetailPage({
                   </div>
                 </div>
 
-                {/* Lektionen */}
+                {/* Lektionen mit Zugriffskontrolle */}
                 {lessons.length > 0 && (
-                  <div className="mb-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                      Kursinhalt ({lessons.length} Lektionen)
-                    </h2>
-                    <div className="space-y-3">
-                      {lessons.map((lesson, index) => (
-                        <Link
-                          key={lesson.id}
-                          href={`/kurse/${course.slug}/lektion/${lesson.slug}`}
-                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:border-primary-200 border border-transparent transition-colors group"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-primary-100 group-hover:bg-primary-500 flex items-center justify-center flex-shrink-0 transition-colors">
-                            <span className="text-primary-600 group-hover:text-white font-bold">
-                              {index + 1}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium text-gray-900 group-hover:text-primary-700">
-                              {lesson.title}
-                            </h3>
-                            {lesson.duration_minutes && (
-                              <span className="text-sm text-gray-500">
-                                {lesson.duration_minutes} Min.
-                              </span>
-                            )}
-                          </div>
-                          {lesson.is_free_preview && (
-                            <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                              Vorschau
-                            </span>
-                          )}
-                          <Play className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
+                  <CourseLessons 
+                    courseId={course.id}
+                    courseSlug={course.slug}
+                    lessons={lessons}
+                  />
                 )}
 
                 {/* Lehrer */}
