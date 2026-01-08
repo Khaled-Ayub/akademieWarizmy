@@ -7,15 +7,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   BookOpen, 
-  Users, 
-  Award, 
-  Play, 
-  Calendar, 
-  Star,
   ChevronRight,
   CheckCircle,
-  Globe,
-  Video,
   Moon
 } from 'lucide-react';
 
@@ -135,81 +128,6 @@ async function HeroSection() {
       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/3 h-full hidden lg:block">
         <div className="absolute right-20 top-20 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl" />
         <div className="absolute right-40 bottom-20 w-48 h-48 bg-secondary-500/20 rounded-full blur-3xl" />
-      </div>
-    </section>
-  );
-}
-
-// Features-Sektion
-function FeaturesSection() {
-  const features = [
-    {
-      icon: Video,
-      title: 'Live-Unterricht',
-      description: 'Interaktive Online-Stunden mit erfahrenen Lehrern via Zoom.',
-    },
-    {
-      icon: Users,
-      title: 'Vor-Ort-Kurse',
-      description: 'Präsenzunterricht für intensives Lernen in kleinen Gruppen.',
-    },
-    {
-      icon: Play,
-      title: 'Aufzeichnungen',
-      description: 'Alle Lektionen als Video verfügbar – lernen Sie in Ihrem Tempo.',
-    },
-    {
-      icon: Calendar,
-      title: 'Flexibler Stundenplan',
-      description: 'Wählen Sie Zeiten, die zu Ihrem Alltag passen.',
-    },
-    {
-      icon: Award,
-      title: 'Zertifikate',
-      description: 'Offizielle Zertifikate nach erfolgreicher Prüfung.',
-    },
-    {
-      icon: Globe,
-      title: 'Von überall',
-      description: 'Lernen Sie von zu Hause oder unterwegs – weltweit.',
-    },
-  ];
-
-  return (
-    <section className="py-20 bg-white">
-      <div className="container-custom">
-        {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="section-title">Warum WARIZMY?</h2>
-          <p className="section-subtitle mx-auto">
-            Wir bieten Ihnen die beste Lernerfahrung mit modernen Methoden 
-            und traditionellem Wissen.
-          </p>
-        </div>
-        
-        {/* Feature Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <div 
-              key={feature.title}
-              className="card-hover p-8 group"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              {/* Icon */}
-              <div className="w-14 h-14 rounded-xl bg-primary-100 flex items-center justify-center mb-6 group-hover:bg-primary-500 transition-colors duration-300">
-                <feature.icon className="w-7 h-7 text-primary-500 group-hover:text-white transition-colors duration-300" />
-              </div>
-              
-              {/* Content */}
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
@@ -454,7 +372,6 @@ export default async function HomePage() {
       {/* Extra padding für Header (64px) */}
       <main className="pt-16">
         <HeroSection />
-        <FeaturesSection />
         {/* Unterrichtsplan-Kalender */}
         <ScheduleCalendar />
         <CoursesPreview />
