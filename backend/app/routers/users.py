@@ -694,15 +694,14 @@ async def get_student_dashboard(
                 continue
             added_course_ids.add(course.id)
             
-            # Lektionen für diesen Kurs
+            # Lektionen für diesen Kurs (alle, auch unveröffentlichte)
             result = await db.execute(
                 select(func.count(Lesson.id))
                 .where(Lesson.course_id == course.id)
-                .where(Lesson.is_published == True)
             )
             total_lessons = result.scalar() or 0
             
-            # Abgeschlossene Lektionen
+            # Abgeschlossene Lektionen (nur aus Lektionen in diesem Kurs)
             result = await db.execute(
                 select(func.count(LessonProgress.id))
                 .where(LessonProgress.user_id == current_user.id)
@@ -713,18 +712,19 @@ async def get_student_dashboard(
             )
             completed_lessons = result.scalar() or 0
             
+            print(f"[DEBUG] Class enrollment - Course {course.title}: total_lessons={total_lessons}, completed={completed_lessons}")
+            
             progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
             
-            print(f"[Dashboard] Course {course.title}: {completed_lessons}/{total_lessons} completed (progress={progress}%)")
+            print(f"[Dashboard] Class - Course {course.title}: {completed_lessons}/{total_lessons} completed (progress={progress}%) - user_id={current_user.id}")
             
             # Nächste unvollendete Lektion ermitteln
             next_lesson_slug = None
             if progress < 100 and total_lessons > 0:
-                # Alle Lektionen sortiert abrufen
+                # Alle Lektionen sortiert abrufen (auch unveröffentlichte)
                 lessons_result = await db.execute(
                     select(Lesson)
                     .where(Lesson.course_id == course.id)
-                    .where(Lesson.is_published == True)
                     .order_by(Lesson.order)
                 )
                 all_lessons = lessons_result.scalars().all()
@@ -779,15 +779,14 @@ async def get_student_dashboard(
             continue
         added_course_ids.add(course.id)
         
-        # Lektionen für diesen Kurs
+        # Lektionen für diesen Kurs (alle, auch unveröffentlichte)
         result = await db.execute(
             select(func.count(Lesson.id))
             .where(Lesson.course_id == course.id)
-            .where(Lesson.is_published == True)
         )
         total_lessons = result.scalar() or 0
         
-        # Abgeschlossene Lektionen
+        # Abgeschlossene Lektionen (nur aus Lektionen in diesem Kurs)
         result = await db.execute(
             select(func.count(LessonProgress.id))
             .where(LessonProgress.user_id == current_user.id)
@@ -798,18 +797,19 @@ async def get_student_dashboard(
         )
         completed_lessons = result.scalar() or 0
         
+        print(f"[DEBUG] Direct enrollment - Course {course.title}: total_lessons={total_lessons}, completed={completed_lessons}")
+        
         progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
         
-        print(f"[Dashboard] Course {course.title}: {completed_lessons}/{total_lessons} completed (progress={progress}%)")
+        print(f"[Dashboard] Direct - Course {course.title}: {completed_lessons}/{total_lessons} completed (progress={progress}%) - user_id={current_user.id}")
         
         # Nächste unvollendete Lektion ermitteln
         next_lesson_slug = None
         if progress < 100 and total_lessons > 0:
-            # Alle Lektionen sortiert abrufen
+            # Alle Lektionen sortiert abrufen (auch unveröffentlichte)
             lessons_result = await db.execute(
                 select(Lesson)
                 .where(Lesson.course_id == course.id)
-                .where(Lesson.is_published == True)
                 .order_by(Lesson.order)
             )
             all_lessons = lessons_result.scalars().all()
