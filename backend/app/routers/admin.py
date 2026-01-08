@@ -245,11 +245,12 @@ async def list_users(
     # Für jeden Benutzer Klassen und Kurse laden
     user_list = []
     for u in users:
-        # Klassen-Einschreibungen mit Kursen laden
+        # Klassen-Einschreibungen mit Kursen laden (Legacy + Many-to-Many)
         enrollments_result = await db.execute(
             select(ClassEnrollment)
             .options(
-                selectinload(ClassEnrollment.class_).selectinload(Class.courses)
+                selectinload(ClassEnrollment.class_).selectinload(Class.courses),
+                selectinload(ClassEnrollment.class_).selectinload(Class.course)  # Legacy 1:1
             )
             .where(ClassEnrollment.user_id == u.id)
         )
@@ -265,6 +266,10 @@ async def list_users(
                     "name": e.class_.name,
                     "status": e.status.value
                 })
+                # Legacy 1:1 Beziehung (Dropdown im Admin)
+                if e.class_.course:
+                    courses_set.add((str(e.class_.course.id), e.class_.course.title))
+                # Many-to-Many Beziehung
                 for c in e.class_.courses:
                     courses_set.add((str(c.id), c.title))
         
@@ -342,7 +347,8 @@ async def get_user(
     enrollments_result = await db.execute(
         select(ClassEnrollment)
         .options(
-            selectinload(ClassEnrollment.class_).selectinload(Class.courses)
+            selectinload(ClassEnrollment.class_).selectinload(Class.courses),
+            selectinload(ClassEnrollment.class_).selectinload(Class.course)  # Legacy 1:1
         )
         .where(ClassEnrollment.user_id == user_id)
     )
@@ -364,6 +370,16 @@ async def get_user(
                 "enrollment_type": e.enrollment_type,
                 "started_at": e.started_at.isoformat() if e.started_at else None,
             })
+            # Legacy 1:1 Beziehung (Dropdown im Admin)
+            if e.class_.course:
+                if e.class_.course.id not in course_ids:
+                    course_ids.add(e.class_.course.id)
+                    courses_list.append({
+                        "id": str(e.class_.course.id),
+                        "title": e.class_.course.title,
+                        "slug": e.class_.course.slug
+                    })
+            # Many-to-Many Beziehung
             for c in e.class_.courses:
                 if c.id not in course_ids:
                     course_ids.add(c.id)
