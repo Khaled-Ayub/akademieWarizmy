@@ -4,6 +4,7 @@
 // Einzelne Ankündigung abrufen, aktualisieren, löschen
 
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 // PATCH /api/admin/announcements/[id] - Ankündigung aktualisieren
 export async function PATCH(
@@ -12,12 +13,15 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('access_token')?.value;
     const body = await request.json();
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/announcements/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify(body)
     });
@@ -31,7 +35,7 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
@@ -48,16 +52,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('access_token')?.value;
     
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/announcements/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
       }
     });
 
     if (!res.ok) {
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       return NextResponse.json(
         { success: false, detail: data.detail || 'Fehler beim Löschen' },
         { status: res.status }
