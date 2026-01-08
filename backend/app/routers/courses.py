@@ -597,7 +597,14 @@ async def update_lesson(
         setattr(lesson, field, value)
     
     await db.commit()
-    await db.refresh(lesson)
+    
+    # Lektion mit allen Beziehungen neu laden
+    result = await db.execute(
+        select(Lesson)
+        .where(Lesson.id == lesson_id)
+        .options(selectinload(Lesson.homework))
+    )
+    lesson = result.scalar_one()
     
     return LessonResponse.model_validate(lesson)
 
