@@ -170,7 +170,6 @@ export default function ContactForm() {
           <option value="anmeldung">Anmeldung & Registrierung</option>
           <option value="zahlung">Zahlung & Rechnung</option>
           <option value="technisch">Technische Probleme</option>
-          <option value="bewerbung">Bewerbung als Lehrer</option>
           <option value="sonstiges">Sonstiges</option>
         </select>
       </div>

@@ -386,6 +386,7 @@ async def get_student_dashboard(
     """
     from datetime import timedelta
     from sqlalchemy import func
+    from app.models.class_.class_model import EnrollmentStatus
     
     now = datetime.utcnow()
     
@@ -394,17 +395,28 @@ async def get_student_dashboard(
         select(ClassEnrollment)
         .options(selectinload(ClassEnrollment.class_).selectinload(Class.course))
         .where(ClassEnrollment.user_id == current_user.id)
-        .where(ClassEnrollment.status == "active")
+        .where(ClassEnrollment.status == EnrollmentStatus.ACTIVE)
     )
     class_enrollments = result.scalars().all()
     class_ids = [e.class_id for e in class_enrollments]
     
     # === Statistiken ===
-    # Aktive Kurse (unique)
+    # Aktive Kurse (unique) - aus Klassen
     unique_courses = set()
     for e in class_enrollments:
         if e.class_ and e.class_.course:
             unique_courses.add(e.class_.course_id)
+    
+    # Direkte Einschreibungen zählen
+    result = await db.execute(
+        select(Enrollment.course_id)
+        .where(Enrollment.user_id == current_user.id)
+        .where(Enrollment.status == "active")
+    )
+    for row in result.all():
+        if row[0]:
+            unique_courses.add(row[0])
+    
     active_courses = len(unique_courses)
     
     # Zertifikate
@@ -475,10 +487,18 @@ async def get_student_dashboard(
     
     # === Meine Kurse mit Fortschritt ===
     my_courses = []
+    added_course_ids = set()
+    
+    # 1. Kurse aus Klassen-Einschreibungen
     for enrollment in class_enrollments:
         if not enrollment.class_ or not enrollment.class_.course:
             continue
         course = enrollment.class_.course
+        
+        # Duplikate vermeiden
+        if course.id in added_course_ids:
+            continue
+        added_course_ids.add(course.id)
         
         # Lektionen für diesen Kurs
         result = await db.execute(
@@ -503,7 +523,54 @@ async def get_student_dashboard(
             "id": str(course.id),
             "title": course.title,
             "progress": progress,
-            "next_lesson": "Nächste Lektion",  # TODO: Tatsächliche nächste Lektion
+            "next_lesson": "Nächste Lektion",
+            "total_lessons": total_lessons,
+            "completed_lessons": completed_lessons,
+        })
+    
+    # 2. Direkte Kurs-Einschreibungen (Seminare ohne Klasse)
+    result = await db.execute(
+        select(Enrollment)
+        .options(selectinload(Enrollment.course))
+        .where(Enrollment.user_id == current_user.id)
+        .where(Enrollment.status == "active")
+    )
+    direct_enrollments = result.scalars().all()
+    
+    for enrollment in direct_enrollments:
+        if not enrollment.course:
+            continue
+        course = enrollment.course
+        
+        # Duplikate vermeiden
+        if course.id in added_course_ids:
+            continue
+        added_course_ids.add(course.id)
+        
+        # Lektionen für diesen Kurs
+        result = await db.execute(
+            select(func.count(Lesson.id))
+            .where(Lesson.course_id == course.id)
+            .where(Lesson.is_published == True)
+        )
+        total_lessons = result.scalar() or 0
+        
+        # Abgeschlossene Lektionen
+        result = await db.execute(
+            select(func.count(LessonProgress.id))
+            .where(LessonProgress.user_id == current_user.id)
+            .where(LessonProgress.course_id == course.id)
+            .where(LessonProgress.completed == True)
+        )
+        completed_lessons = result.scalar() or 0
+        
+        progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        
+        my_courses.append({
+            "id": str(course.id),
+            "title": course.title,
+            "progress": progress,
+            "next_lesson": "Nächste Lektion",
             "total_lessons": total_lessons,
             "completed_lessons": completed_lessons,
         })
