@@ -41,13 +41,26 @@ function OnboardingInner() {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: NodeJS.Timeout;
 
     // Run check once on mount. Use store.getState() to avoid effect deps changing when `user` updates.
     (async () => {
       console.log('[Onboarding] starting one-time auth check (mount)...');
+      
+      // Failsafe: Set loading to false after 10 seconds if still pending
+      timeoutId = setTimeout(() => {
+        if (!cancelled) {
+          console.warn('[Onboarding] Auth check timeout - setting loading=false');
+          setLoading(false);
+        }
+      }, 10000);
+
       const ok = await useAuthStore.getState().checkAuth();
       console.log('[Onboarding] one-time checkAuth result:', ok);
       if (cancelled) return;
+
+      // Clear timeout since we got a response
+      clearTimeout(timeoutId);
 
       if (!ok) {
         router.replace(`/login?next=${encodeURIComponent('/onboarding')}`);
@@ -78,8 +91,9 @@ function OnboardingInner() {
 
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [checkAuth, next, router, user]);
+  }, []); // Empty dependency array - run only once on mount
 
   const handleSave = async () => {
     if (!isAuthenticated) return;
