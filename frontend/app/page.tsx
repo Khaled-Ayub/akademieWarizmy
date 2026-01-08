@@ -6,24 +6,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
-  BookOpen, 
   ChevronRight,
   CheckCircle,
   Moon
 } from 'lucide-react';
 
 // API importieren
-import { 
-  getCourses, 
-  Course, 
-  getCategoryLabel, 
-  getLevelLabel,
-  getMediaUrl 
-} from '@/lib/content';
+import { getDailyGuidances } from '@/lib/content';
 
 // Hijri Datum + Tages-Empfehlung (Islam)
 import { getIslamicDailyInfo } from '@/lib/islamicDate';
-import { getDailyGuidances } from '@/lib/content';
 
 // Ankündigungs-Banner importieren
 import AnnouncementBanner from '@/components/AnnouncementBanner';
@@ -112,126 +104,6 @@ async function HeroSection() {
       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/3 h-full hidden lg:block">
         <div className="absolute right-20 top-20 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl" />
         <div className="absolute right-40 bottom-20 w-48 h-48 bg-secondary-500/20 rounded-full blur-3xl" />
-      </div>
-    </section>
-  );
-}
-
-// Kurse-Preview (Daten werden von FastAPI geladen)
-async function CoursesPreview() {
-  // Kurse von API abrufen
-  const courses = await getCourses();
-  
-  // Fallback wenn keine Kurse vorhanden
-  if (courses.length === 0) {
-    return (
-      <section className="py-20 bg-gray-50">
-        <div className="container-custom">
-          <div className="text-center">
-            <h2 className="section-title">Beliebte Kurse</h2>
-            <p className="section-subtitle mx-auto mb-8">
-              Unsere Kurse werden bald verfügbar sein.
-            </p>
-            <div className="bg-white rounded-xl p-8 shadow-sm max-w-md mx-auto">
-              <BookOpen className="w-12 h-12 text-primary-500 mx-auto mb-4" />
-              <p className="text-gray-600">
-                Fügen Sie Kurse im Admin-Bereich hinzu, um sie hier anzuzeigen.
-              </p>
-              <Link 
-                href="/admin/kurse" 
-                className="btn-primary mt-4 inline-block"
-              >
-                Kurse verwalten
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="py-20 bg-gray-50">
-      <div className="container-custom">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
-          <div>
-            <h2 className="section-title">Beliebte Kurse</h2>
-            <p className="section-subtitle">
-              Entdecken Sie unsere meistgebuchten Kurse.
-            </p>
-          </div>
-          <Link 
-            href="/kurse" 
-            className="mt-6 md:mt-0 inline-flex items-center text-primary-500 font-medium hover:text-primary-600"
-          >
-            Alle Kurse ansehen
-            <ChevronRight className="w-5 h-5 ml-1" />
-          </Link>
-        </div>
-        
-        {/* Course Cards - Dynamisch von API */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {courses.slice(0, 6).map((course) => (
-            <div key={course.id} className="card-hover">
-              {/* Thumbnail */}
-              <div className="h-48 bg-gradient-to-br from-primary-500 to-primary-600 relative overflow-hidden">
-                {course.thumbnail_url ? (
-                  <img 
-                    src={getMediaUrl(course.thumbnail_url)}
-                    alt={course.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 pattern-overlay opacity-20" />
-                )}
-                <div className="absolute bottom-4 left-4">
-                  <span className="badge-primary">
-                    {getCategoryLabel(course.category)}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Content */}
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="badge-secondary">
-                    {getLevelLabel(course.level)}
-                  </span>
-                  {course.price > 0 && (
-                    <span className="text-sm font-semibold text-primary-600">
-                      €{course.price}
-                    </span>
-                  )}
-                </div>
-                
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {course.title}
-                </h3>
-                
-                {course.short_description && (
-                  <p className="text-gray-600 text-sm line-clamp-2">
-                    {course.short_description}
-                  </p>
-                )}
-                
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                  {course.duration_weeks && (
-                    <span className="text-sm text-gray-500">
-                      {course.duration_weeks} Wochen
-                    </span>
-                  )}
-                  <Link 
-                    href={`/kurse/${course.slug}`}
-                    className="text-primary-500 font-medium hover:text-primary-600 text-sm"
-                  >
-                    Details →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
@@ -358,7 +230,6 @@ export default async function HomePage() {
         <HeroSection />
         {/* Unterrichtsplan-Kalender */}
         <ScheduleCalendar />
-        <CoursesPreview />
         {/* Newsletter Sektion */}
         <section className="py-16 bg-white">
           <div className="container-custom max-w-4xl">
