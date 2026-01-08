@@ -83,15 +83,6 @@ api_router.include_router(
 )
 
 # =========================================
-# Hausaufgaben
-# =========================================
-api_router.include_router(
-    homework.router,
-    prefix="",  # Kein Präfix, da /homework bereits im Router
-    tags=["Hausaufgaben"]
-)
-
-# =========================================
 # Einschreibungen & Fortschritt
 # =========================================
 api_router.include_router(
