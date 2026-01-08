@@ -40,13 +40,14 @@ interface Enrollment {
   status: 'active' | 'completed' | 'paused';
   enrolled_at: string;
   completed_at?: string;
+  next_lesson_slug?: string;
 }
 
 // =========================================
 // Kurs-Karte Komponente
 // =========================================
 function CourseCard({ enrollment }: { enrollment: Enrollment }) {
-  const { course, progress, completed_lessons, status } = enrollment;
+  const { course, progress, completed_lessons, status, next_lesson_slug } = enrollment;
   const isCompleted = status === 'completed';
   
   return (
@@ -132,7 +133,12 @@ function CourseCard({ enrollment }: { enrollment: Enrollment }) {
         
         {/* Action Button */}
         <Link 
-          href={`/kurse/${course.slug}`}
+          href={isCompleted 
+            ? `/kurse/${course.slug}` 
+            : next_lesson_slug 
+              ? `/kurse/${course.slug}/lektion/${next_lesson_slug}`
+              : `/kurse/${course.slug}`
+          }
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors ${
             isCompleted
               ? 'bg-green-50 text-green-700 hover:bg-green-100'

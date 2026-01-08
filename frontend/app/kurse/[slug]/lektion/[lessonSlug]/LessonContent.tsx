@@ -22,10 +22,10 @@ import {
   Video,
   File,
   AlertCircle,
-  Loader2,
 } from 'lucide-react';
 import { getMediaUrl, Lesson } from '@/lib/content';
 import { usersApi } from '@/lib/api';
+import { notifyProgressChange } from '@/hooks/useProgressSync';
 import VimeoPlayer from '@/components/VimeoPlayer';
 import LessonNavbar from '@/components/LessonNavbar';
 import LessonAccessCheck from './LessonAccessCheck';
@@ -246,40 +246,47 @@ export default function LessonContent({
   params
 }: LessonContentProps) {
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isMarking, setIsMarking] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
 
-  // Lektion beim Öffnen als besucht markieren
+  // Lektion beim Öffnen automatisch als abgeschlossen markieren
   useEffect(() => {
-    const markAsVisited = async () => {
+    const markAsCompleted = async () => {
+      if (!lesson.id || markingComplete) {
+        return;
+      }
+      
+      setMarkingComplete(true);
       try {
-        // Nur wenn Lektion eine ID hat
-        if (lesson.id) {
-          await usersApi.updateLessonProgress(String(lesson.id), {
-            watched_seconds: 0 // Initial als besucht markieren
-          });
-        }
-      } catch (err) {
-        // Fehler ignorieren (z.B. wenn nicht eingeloggt)
-        console.debug('Fortschritt konnte nicht gespeichert werden:', err);
+        const lessonId = String(lesson.id);
+        const courseId = String(course.id);
+        
+        console.log('Markiere Lektion als abgeschlossen:', { lessonId, courseId, lesson });
+        
+        const response = await usersApi.markLessonComplete(lessonId);
+        console.log('Lektion markiert:', response);
+        
+        setIsCompleted(true);
+        
+        // Benachrichtige alle Listener (z.B. Dashboard) über die Änderung
+        notifyProgressChange({
+          lessonId,
+          courseId,
+          completed: true
+        });
+      } catch (err: any) {
+        console.error('Fehler beim Markieren der Lektion:', {
+          error: err,
+          errorMessage: err?.message,
+          response: err?.response?.data,
+          lessonId: lesson.id
+        });
+      } finally {
+        setMarkingComplete(false);
       }
     };
-    markAsVisited();
-  }, [lesson.id]);
-
-  // Lektion als abgeschlossen markieren
-  const handleMarkComplete = async () => {
-    if (!lesson.id || isMarking) return;
     
-    setIsMarking(true);
-    try {
-      await usersApi.markLessonComplete(String(lesson.id));
-      setIsCompleted(true);
-    } catch (err) {
-      console.error('Fehler beim Markieren als abgeschlossen:', err);
-    } finally {
-      setIsMarking(false);
-    }
-  };
+    markAsCompleted();
+  }, [lesson.id, course.id]);
 
   return (
     <LessonAccessCheck
@@ -323,28 +330,15 @@ export default function LessonContent({
                   </div>
                 )}
 
-                {/* Lektion als abgeschlossen markieren Button */}
-                <div className="py-4 border-t border-gray-100">
-                  {isCompleted ? (
+                {/* Lektion bereits abgeschlossen */}
+                {isCompleted && (
+                  <div className="py-4 border-t border-gray-100">
                     <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-3 rounded-lg">
                       <CheckCircle2 className="w-5 h-5" />
                       <span className="font-medium">Lektion abgeschlossen!</span>
                     </div>
-                  ) : (
-                    <button
-                      onClick={handleMarkComplete}
-                      disabled={isMarking}
-                      className="flex items-center gap-2 px-4 py-3 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors font-medium w-full justify-center disabled:opacity-50"
-                    >
-                      {isMarking ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-5 h-5" />
-                      )}
-                      Lektion als abgeschlossen markieren
-                    </button>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   {prevLesson ? (

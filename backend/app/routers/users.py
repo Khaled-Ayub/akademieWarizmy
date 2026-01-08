@@ -106,7 +106,7 @@ class EnrollmentResponse(BaseModel):
 
 class LessonProgressResponse(BaseModel):
     """Schema für Lektions-Fortschritt"""
-    lesson_id: int
+    lesson_id: str  # UUID als String
     watched_seconds: int
     completed: bool
     completed_at: Optional[datetime]
@@ -313,6 +313,38 @@ async def get_my_enrollments(
             
             progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
             
+            # Nächste unvollendete Lektion ermitteln
+            next_lesson_slug = None
+            if progress < 100 and total_lessons > 0:
+                # Alle Lektionen sortiert abrufen
+                lessons_result = await db.execute(
+                    select(Lesson)
+                    .where(Lesson.course_id == course.id)
+                    .where(Lesson.is_published == True)
+                    .order_by(Lesson.order)
+                )
+                all_lessons = lessons_result.scalars().all()
+                
+                # Abgeschlossene Lektionen ermitteln
+                completed_ids_result = await db.execute(
+                    select(LessonProgress.lesson_id)
+                    .join(Lesson, LessonProgress.lesson_id == Lesson.id)
+                    .where(LessonProgress.user_id == current_user.id)
+                    .where(Lesson.course_id == course.id)
+                    .where(LessonProgress.completed == True)
+                )
+                completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
+                
+                # Erste nicht abgeschlossene Lektion finden
+                for lesson in all_lessons:
+                    if lesson.id not in completed_lesson_ids:
+                        next_lesson_slug = lesson.slug
+                        break
+                
+                # Falls alle abgeschlossen, nimm die erste Lektion
+                if not next_lesson_slug and all_lessons:
+                    next_lesson_slug = all_lessons[0].slug
+            
             enrollments_list.append({
                 "id": str(ce.id),
                 "course": {
@@ -328,6 +360,7 @@ async def get_my_enrollments(
                 "completed_lessons": completed_lessons,
                 "status": "completed" if progress >= 100 else "active",
                 "enrolled_at": ce.started_at.isoformat() if ce.started_at else None,
+                "next_lesson_slug": next_lesson_slug,
             })
     
     # 2. Direkte Seminar-Einschreibungen
@@ -363,6 +396,38 @@ async def get_my_enrollments(
         
         progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
         
+        # Nächste unvollendete Lektion ermitteln
+        next_lesson_slug = None
+        if progress < 100 and total_lessons > 0:
+            # Alle Lektionen sortiert abrufen
+            lessons_result = await db.execute(
+                select(Lesson)
+                .where(Lesson.course_id == e.course.id)
+                .where(Lesson.is_published == True)
+                .order_by(Lesson.order)
+            )
+            all_lessons = lessons_result.scalars().all()
+            
+            # Abgeschlossene Lektionen ermitteln
+            completed_ids_result = await db.execute(
+                select(LessonProgress.lesson_id)
+                .join(Lesson, LessonProgress.lesson_id == Lesson.id)
+                .where(LessonProgress.user_id == current_user.id)
+                .where(Lesson.course_id == e.course.id)
+                .where(LessonProgress.completed == True)
+            )
+            completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
+            
+            # Erste nicht abgeschlossene Lektion finden
+            for lesson in all_lessons:
+                if lesson.id not in completed_lesson_ids:
+                    next_lesson_slug = lesson.slug
+                    break
+            
+            # Falls alle abgeschlossen, nimm die erste Lektion
+            if not next_lesson_slug and all_lessons:
+                next_lesson_slug = all_lessons[0].slug
+        
         enrollments_list.append({
             "id": str(e.id),
             "course": {
@@ -378,6 +443,7 @@ async def get_my_enrollments(
             "completed_lessons": completed_lessons,
             "status": "completed" if progress >= 100 else "active",
             "enrolled_at": e.started_at.isoformat() if e.started_at else None,
+            "next_lesson_slug": next_lesson_slug,
         })
     
     return enrollments_list
@@ -649,11 +715,47 @@ async def get_student_dashboard(
             
             progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
             
+            print(f"[Dashboard] Course {course.title}: {completed_lessons}/{total_lessons} completed (progress={progress}%)")
+            
+            # Nächste unvollendete Lektion ermitteln
+            next_lesson_slug = None
+            if progress < 100 and total_lessons > 0:
+                # Alle Lektionen sortiert abrufen
+                lessons_result = await db.execute(
+                    select(Lesson)
+                    .where(Lesson.course_id == course.id)
+                    .where(Lesson.is_published == True)
+                    .order_by(Lesson.order)
+                )
+                all_lessons = lessons_result.scalars().all()
+                
+                # Abgeschlossene Lektionen ermitteln
+                completed_ids_result = await db.execute(
+                    select(LessonProgress.lesson_id)
+                    .join(Lesson, LessonProgress.lesson_id == Lesson.id)
+                    .where(LessonProgress.user_id == current_user.id)
+                    .where(Lesson.course_id == course.id)
+                    .where(LessonProgress.completed == True)
+                )
+                completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
+                
+                # Erste nicht abgeschlossene Lektion finden
+                for lesson in all_lessons:
+                    if lesson.id not in completed_lesson_ids:
+                        next_lesson_slug = lesson.slug
+                        break
+                
+                # Falls alle abgeschlossen, nimm die erste Lektion
+                if not next_lesson_slug and all_lessons:
+                    next_lesson_slug = all_lessons[0].slug
+            
             my_courses.append({
                 "id": str(course.id),
                 "title": course.title,
+                "slug": course.slug,
                 "progress": progress,
                 "next_lesson": "Nächste Lektion",
+                "next_lesson_slug": next_lesson_slug,
                 "total_lessons": total_lessons,
                 "completed_lessons": completed_lessons,
             })
@@ -698,11 +800,47 @@ async def get_student_dashboard(
         
         progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
         
+        print(f"[Dashboard] Course {course.title}: {completed_lessons}/{total_lessons} completed (progress={progress}%)")
+        
+        # Nächste unvollendete Lektion ermitteln
+        next_lesson_slug = None
+        if progress < 100 and total_lessons > 0:
+            # Alle Lektionen sortiert abrufen
+            lessons_result = await db.execute(
+                select(Lesson)
+                .where(Lesson.course_id == course.id)
+                .where(Lesson.is_published == True)
+                .order_by(Lesson.order)
+            )
+            all_lessons = lessons_result.scalars().all()
+            
+            # Abgeschlossene Lektionen ermitteln
+            completed_ids_result = await db.execute(
+                select(LessonProgress.lesson_id)
+                .join(Lesson, LessonProgress.lesson_id == Lesson.id)
+                .where(LessonProgress.user_id == current_user.id)
+                .where(Lesson.course_id == course.id)
+                .where(LessonProgress.completed == True)
+            )
+            completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
+            
+            # Erste nicht abgeschlossene Lektion finden
+            for lesson in all_lessons:
+                if lesson.id not in completed_lesson_ids:
+                    next_lesson_slug = lesson.slug
+                    break
+            
+            # Falls alle abgeschlossen, nimm die erste Lektion
+            if not next_lesson_slug and all_lessons:
+                next_lesson_slug = all_lessons[0].slug
+        
         my_courses.append({
             "id": str(course.id),
             "title": course.title,
+            "slug": course.slug,
             "progress": progress,
             "next_lesson": "Nächste Lektion",
+            "next_lesson_slug": next_lesson_slug,
             "total_lessons": total_lessons,
             "completed_lessons": completed_lessons,
         })

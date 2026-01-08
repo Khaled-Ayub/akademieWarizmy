@@ -25,6 +25,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { dashboardApi, sessionsApi } from '@/lib/api';
+import { useProgressSync } from '@/hooks/useProgressSync';
 
 // =========================================
 // Typen
@@ -51,8 +52,10 @@ interface UpcomingSession {
 interface MyCourse {
   id: string;
   title: string;
+  slug: string;
   progress: number;
   next_lesson: string;
+  next_lesson_slug?: string;
   total_lessons: number;
   completed_lessons: number;
 }
@@ -361,6 +364,11 @@ function SessionCard({ session, onConfirm }: {
 // Kurs-Fortschritt Karte
 // =========================================
 function CourseProgressCard({ course }: { course: MyCourse }) {
+  // Bestimme den Link: Wenn next_lesson_slug vorhanden, zur Lektion, sonst zum Kurs
+  const continueLink = course.next_lesson_slug 
+    ? `/kurse/${course.slug}/lektion/${course.next_lesson_slug}`
+    : `/kurse/${course.slug}`;
+  
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between mb-3">
@@ -381,7 +389,7 @@ function CourseProgressCard({ course }: { course: MyCourse }) {
           {course.completed_lessons}/{course.total_lessons} Lektionen
         </span>
         <Link 
-          href={`/dashboard/meine-kurse/${course.id}`}
+          href={continueLink}
           className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
         >
           Weiter
@@ -483,6 +491,13 @@ export default function StudentDashboard() {
     loadDashboard();
     loadUnconfirmed();
   }, []);
+
+  // Abonniere Fortschritts-Änderungen
+  useProgressSync((data) => {
+    console.log('Dashboard: Fortschritts-Änderung erkannt:', data);
+    // Lade Dashboard-Daten neu
+    loadDashboard();
+  });
 
   const loadDashboard = async () => {
     try {

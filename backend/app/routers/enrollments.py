@@ -131,10 +131,13 @@ async def update_lesson_progress(
     """
     from uuid import UUID
     
+    print(f"[Enrollments] Update lesson progress: user_id={current_user.id}, lesson_id={lesson_id}, data={progress_data}")
+    
     # lesson_id in UUID umwandeln
     try:
         lesson_uuid = UUID(lesson_id)
     except ValueError:
+        print(f"[Enrollments] Invalid lesson_id format: {lesson_id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ungültige Lektions-ID"
@@ -149,11 +152,25 @@ async def update_lesson_progress(
     progress = result.scalar_one_or_none()
     
     if not progress:
+        # Überprüfe, ob die Lektion existiert
+        lesson_result = await db.execute(
+            select(Lesson)
+            .where(Lesson.id == lesson_uuid)
+        )
+        lesson = lesson_result.scalar_one_or_none()
+        if not lesson:
+            print(f"[Enrollments] Lesson not found: {lesson_uuid}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Lektion nicht gefunden"
+            )
+        
         progress = LessonProgress(
             user_id=current_user.id,
             lesson_id=lesson_uuid,
         )
         db.add(progress)
+        print(f"[Enrollments] Created new progress entry for lesson {lesson_uuid}")
     
     # Fortschritt aktualisieren
     if progress_data.watched_seconds is not None:
@@ -163,9 +180,12 @@ async def update_lesson_progress(
         progress.completed = progress_data.completed
         if progress_data.completed:
             progress.completed_at = datetime.utcnow()
+            print(f"[Enrollments] Marked lesson {lesson_uuid} as completed for user {current_user.id}")
     
     await db.commit()
     await db.refresh(progress)
+    
+    print(f"[Enrollments] Updated progress: completed={progress.completed}, completed_at={progress.completed_at}")
     
     return {
         "lesson_id": str(progress.lesson_id),
