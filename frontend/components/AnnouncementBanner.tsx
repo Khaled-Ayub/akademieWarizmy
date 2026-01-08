@@ -130,7 +130,7 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
   return (
     <div 
-      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-visible relative z-50 shadow-lg"
+      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-visible fixed top-0 left-0 right-0 z-50 shadow-lg"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
