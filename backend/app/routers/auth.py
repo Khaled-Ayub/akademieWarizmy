@@ -57,6 +57,7 @@ class UserResponse(BaseModel):
     whatsapp_opt_in: bool = False
     whatsapp_channel_opt_in: bool = False
     onboarding_completed: bool = False
+    profile_picture_url: Optional[str] = None
     role: str
     is_active: bool
     email_verified: bool
@@ -454,6 +455,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
         whatsapp_opt_in=current_user.whatsapp_opt_in,
         whatsapp_channel_opt_in=current_user.whatsapp_channel_opt_in,
         onboarding_completed=current_user.onboarding_completed,
+        profile_picture_url=getattr(current_user, 'profile_picture_url', None),
         role=current_user.role.value,
         is_active=current_user.is_active,
         email_verified=current_user.email_verified,
