@@ -100,20 +100,8 @@ export default function RootLayout({
         {/* Preconnect für externe Ressourcen */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              function updatePadding() {
-                const visible = localStorage.getItem('announcement-banner-visible');
-                document.documentElement.style.setProperty('--banner-height', visible === 'true' ? '48px' : '0px');
-              }
-              updatePadding();
-              window.addEventListener('storage', updatePadding);
-            })();
-          `
-        }} />
       </head>
-      <body className="font-sans antialiased bg-background-light text-gray-900 min-h-screen" style={{ paddingTop: 'var(--banner-height, 0px)', transition: 'padding-top 0.3s ease' }}>
+      <body className="font-sans antialiased bg-background-light text-gray-900 min-h-screen">
         {/* Ankündigungs-Banner - erscheint ganz oben */}
         <AnnouncementBanner />
         {children}

@@ -87,13 +87,6 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
   // Render
   // =========================================
 
-  // Banner-Sichtbarkeit kommunizieren
-  useEffect(() => {
-    const isVisible = !isLoading && announcements.length > 0 && !isClosed;
-    localStorage.setItem('announcement-banner-visible', isVisible ? 'true' : 'false');
-    window.dispatchEvent(new Event('storage'));
-  }, [isLoading, announcements.length, isClosed]);
-
   // Nichts anzeigen wenn keine Ankündigungen, noch lädt oder geschlossen
   if (isLoading || announcements.length === 0 || isClosed) {
     return null;
@@ -137,7 +130,7 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
   return (
     <div 
-      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-visible fixed top-0 left-0 right-0 z-50 shadow-lg"
+      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-visible sticky top-0 left-0 right-0 z-50 shadow-lg"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -180,11 +173,7 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
       
       {/* Schließen-Button */}
       <button
-        onClick={() => {
-          setIsClosed(true);
-          localStorage.setItem('announcement-banner-closed', 'true');
-          window.dispatchEvent(new Event('storage'));
-        }}
+        onClick={() => setIsClosed(true)}
         className="absolute right-2 top-1/2 -translate-y-1/2 z-40 p-1 hover:bg-red-700 rounded-full transition-colors bg-red-600"
         aria-label="Ankündigung schließen"
       >
