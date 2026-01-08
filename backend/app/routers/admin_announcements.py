@@ -67,8 +67,8 @@ async def list_announcements(
     return [
         AnnouncementResponse(
             id=a.id,
-            title=a.text.split('\n')[0] if '\n' in a.text else a.text[:50] + ('...' if len(a.text) > 50 else ''),
-            content=a.text,
+            title=(a.text.split('\n')[0] if a.text and '\n' in a.text else (a.text[:50] + ('...' if a.text and len(a.text) > 50 else '') if a.text else 'Untitled')),
+            content=a.text or '',
             is_active=a.is_active,
             created_at=a.created_at,
             updated_at=a.updated_at or a.created_at
@@ -128,8 +128,8 @@ async def update_announcement(
     
     return AnnouncementResponse(
         id=announcement.id,
-        title=announcement.text.split('\n')[0] if '\n' in announcement.text else announcement.text[:50],
-        content=announcement.text,
+        title=(announcement.text.split('\n')[0] if announcement.text and '\n' in announcement.text else (announcement.text[:50] + ('...' if announcement.text and len(announcement.text) > 50 else '') if announcement.text else 'Untitled')),
+        content=announcement.text or '',
         is_active=announcement.is_active,
         created_at=announcement.created_at,
         updated_at=announcement.updated_at or announcement.created_at
