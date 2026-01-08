@@ -251,31 +251,134 @@ async def get_my_classes(
     ]
 
 
-@router.get("/me/enrollments", response_model=List[EnrollmentResponse])
+@router.get("/me/enrollments")
 async def get_my_enrollments(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Meine Seminar-Einschreibungen (ohne Klasse) abrufen.
+    Alle meine Kurs-Einschreibungen abrufen.
+    Enthält sowohl direkte Einschreibungen als auch Kurse über Klassen.
     """
-    result = await db.execute(
-        select(Enrollment)
-        .where(Enrollment.user_id == current_user.id)
-    )
-    enrollments = result.scalars().all()
+    from sqlalchemy import func
+    from app.models.class_.class_model import EnrollmentStatus
     
-    return [
-        EnrollmentResponse(
-            id=str(e.id),
-            course_id=e.course_id,
-            enrollment_type=e.enrollment_type.value,
-            status=e.status.value,
-            started_at=e.started_at,
-            expires_at=e.expires_at,
+    enrollments_list = []
+    added_course_ids = set()
+    
+    # 1. Klassen-basierte Kurse
+    class_result = await db.execute(
+        select(ClassEnrollment)
+        .options(
+            selectinload(ClassEnrollment.class_).selectinload(Class.course),
+            selectinload(ClassEnrollment.class_).selectinload(Class.courses)
         )
-        for e in enrollments
-    ]
+        .where(ClassEnrollment.user_id == current_user.id)
+        .where(ClassEnrollment.status == EnrollmentStatus.ACTIVE)
+    )
+    class_enrollments = class_result.scalars().all()
+    
+    for ce in class_enrollments:
+        if not ce.class_:
+            continue
+        
+        # Sammle alle Kurse (Legacy + Many-to-Many)
+        courses_to_add = []
+        if ce.class_.course:
+            courses_to_add.append(ce.class_.course)
+        for c in ce.class_.courses:
+            courses_to_add.append(c)
+        
+        for course in courses_to_add:
+            if course.id in added_course_ids:
+                continue
+            added_course_ids.add(course.id)
+            
+            # Fortschritt berechnen
+            total_result = await db.execute(
+                select(func.count(Lesson.id))
+                .where(Lesson.course_id == course.id)
+                .where(Lesson.is_published == True)
+            )
+            total_lessons = total_result.scalar() or 0
+            
+            completed_result = await db.execute(
+                select(func.count(LessonProgress.id))
+                .where(LessonProgress.user_id == current_user.id)
+                .where(LessonProgress.course_id == course.id)
+                .where(LessonProgress.completed == True)
+            )
+            completed_lessons = completed_result.scalar() or 0
+            
+            progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+            
+            enrollments_list.append({
+                "id": str(ce.id),
+                "course": {
+                    "id": str(course.id),
+                    "title": course.title,
+                    "slug": course.slug,
+                    "short_description": course.short_description,
+                    "thumbnail_url": course.thumbnail_url,
+                    "duration_weeks": course.duration_weeks,
+                    "total_lessons": total_lessons,
+                },
+                "progress": progress,
+                "completed_lessons": completed_lessons,
+                "status": "completed" if progress >= 100 else "active",
+                "enrolled_at": ce.started_at.isoformat() if ce.started_at else None,
+            })
+    
+    # 2. Direkte Seminar-Einschreibungen
+    direct_result = await db.execute(
+        select(Enrollment)
+        .options(selectinload(Enrollment.course))
+        .where(Enrollment.user_id == current_user.id)
+        .where(Enrollment.status == "active")
+    )
+    direct_enrollments = direct_result.scalars().all()
+    
+    for e in direct_enrollments:
+        if not e.course or e.course.id in added_course_ids:
+            continue
+        added_course_ids.add(e.course.id)
+        
+        # Fortschritt berechnen
+        total_result = await db.execute(
+            select(func.count(Lesson.id))
+            .where(Lesson.course_id == e.course.id)
+            .where(Lesson.is_published == True)
+        )
+        total_lessons = total_result.scalar() or 0
+        
+        completed_result = await db.execute(
+            select(func.count(LessonProgress.id))
+            .where(LessonProgress.user_id == current_user.id)
+            .where(LessonProgress.course_id == e.course.id)
+            .where(LessonProgress.completed == True)
+        )
+        completed_lessons = completed_result.scalar() or 0
+        
+        progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        
+        enrollments_list.append({
+            "id": str(e.id),
+            "course": {
+                "id": str(e.course.id),
+                "title": e.course.title,
+                "slug": e.course.slug,
+                "short_description": e.course.short_description,
+                "thumbnail_url": e.course.thumbnail_url,
+                "duration_weeks": e.course.duration_weeks,
+                "total_lessons": total_lessons,
+            },
+            "progress": progress,
+            "completed_lessons": completed_lessons,
+            "status": "completed" if progress >= 100 else "active",
+            "enrolled_at": e.started_at.isoformat() if e.started_at else None,
+        })
+    
+    return enrollments_list
 
 
 @router.get("/me/progress", response_model=List[LessonProgressResponse])

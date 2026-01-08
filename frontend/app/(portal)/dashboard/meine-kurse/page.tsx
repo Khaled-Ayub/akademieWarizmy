@@ -196,57 +196,13 @@ export default function MeineKursePage() {
   const loadEnrollments = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await usersApi.getMyEnrollments();
       setEnrollments(data || []);
     } catch (err) {
-      // Falls keine echten Daten, Mock-Daten verwenden
-      setEnrollments([
-        {
-          id: '1',
-          course: {
-            id: '1',
-            title: 'Arabisch für Anfänger',
-            slug: 'arabisch-anfaenger',
-            short_description: 'Lerne die Grundlagen der arabischen Sprache.',
-            duration_weeks: 12,
-            total_lessons: 20,
-          },
-          progress: 65,
-          completed_lessons: 13,
-          status: 'active',
-          enrolled_at: '2025-10-15',
-        },
-        {
-          id: '2',
-          course: {
-            id: '2',
-            title: 'Quran Rezitation',
-            slug: 'quran-rezitation',
-            short_description: 'Lerne die korrekte Rezitation des Quran mit Tajweed.',
-            duration_weeks: 8,
-            total_lessons: 15,
-          },
-          progress: 40,
-          completed_lessons: 6,
-          status: 'active',
-          enrolled_at: '2025-11-01',
-        },
-        {
-          id: '3',
-          course: {
-            id: '3',
-            title: 'Islamische Geschichte',
-            slug: 'islamische-geschichte',
-            short_description: 'Von der Zeit des Propheten ﷺ bis heute.',
-            duration_weeks: 10,
-            total_lessons: 12,
-          },
-          progress: 25,
-          completed_lessons: 3,
-          status: 'active',
-          enrolled_at: '2025-12-01',
-        },
-      ]);
+      console.error('Kurse laden fehlgeschlagen:', err);
+      setError('Kurse konnten nicht geladen werden');
+      setEnrollments([]);
     } finally {
       setLoading(false);
     }
