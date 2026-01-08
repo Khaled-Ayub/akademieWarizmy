@@ -15,7 +15,7 @@ interface Lesson {
   id: string;
   title: string;
   slug: string;
-  duration_minutes?: number;
+  duration_minutes?: number | null;
   is_free_preview?: boolean;
   order_index?: number;
 }
