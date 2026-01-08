@@ -138,6 +138,18 @@ export default function VimeoPlayer({
   // Video-ID ermitteln
   const id = videoId || (videoUrl ? extractVimeoId(videoUrl) : null);
   
+  // Debug-Output (nur in Entwicklung)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[VimeoPlayer] Props:', { videoId, videoUrl });
+      console.log('[VimeoPlayer] Extracted ID:', id);
+      
+      if (!id && videoUrl) {
+        console.error('[VimeoPlayer] Konnte keine Video-ID extrahieren aus:', videoUrl);
+      }
+    }
+  }, [videoId, videoUrl, id]);
+  
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -296,12 +308,28 @@ export default function VimeoPlayer({
   if (!id) {
     return (
       <div className={`aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl flex items-center justify-center ${className}`}>
-        <div className="text-center text-gray-400">
+        <div className="text-center text-gray-400 p-6">
           <div className="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
             <Play className="w-10 h-10 opacity-50" />
           </div>
           <p className="text-lg font-medium">Kein Video verfügbar</p>
           <p className="text-sm text-gray-500 mt-1">Dieses Video wird später hinzugefügt</p>
+          
+          {/* Debug-Info nur in Entwicklung */}
+          {process.env.NODE_ENV === 'development' && videoUrl && (
+            <div className="mt-4 p-3 bg-red-900/30 rounded-lg text-xs text-red-400">
+              <p className="font-semibold mb-1">Debug-Info:</p>
+              <p className="text-left">URL: {videoUrl}</p>
+              <p className="text-left mt-1">ID konnte nicht extrahiert werden</p>
+              <p className="text-left mt-2">Unterstützte Formate:</p>
+              <ul className="text-left list-disc list-inside mt-1 space-y-0.5">
+                <li>vimeo.com/123456789</li>
+                <li>player.vimeo.com/video/123456789</li>
+                <li>vimeo.com/manage/videos/123456789</li>
+                <li>Nur die Video-ID: 123456789</li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     );

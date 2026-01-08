@@ -19,7 +19,10 @@ import {
   MessageSquare,
   Shield,
   Award,
-  BookOpen
+  BookOpen,
+  Camera,
+  X,
+  ImagePlus
 } from 'lucide-react';
 
 import { useAuthStore, User as UserType } from '@/stores/authStore';
@@ -41,6 +44,12 @@ interface ProfileData {
   newsletter_opt_in: boolean;
   whatsapp_opt_in: boolean;
   whatsapp_channel_opt_in: boolean;
+}
+
+interface ProfilePictureState {
+  avatar_url: string | null;
+  uploading: boolean;
+  error: string | null;
 }
 
 // =========================================
@@ -196,6 +205,12 @@ export default function ProfilePage() {
     whatsapp_opt_in: false,
     whatsapp_channel_opt_in: false,
   });
+  
+  const [profilePic, setProfilePic] = useState<ProfilePictureState>({
+    avatar_url: null,
+    uploading: false,
+    error: null
+  });
 
   // Profildaten laden
   useEffect(() => {
@@ -214,9 +229,86 @@ export default function ProfilePage() {
         whatsapp_opt_in: user.whatsapp_opt_in || false,
         whatsapp_channel_opt_in: user.whatsapp_channel_opt_in || false,
       });
+      
+      // Profilbild laden (falls vorhanden)
+      const storedAvatar = localStorage.getItem(`avatar_${user.id}`);
+      if (storedAvatar) {
+        setProfilePic(prev => ({ ...prev, avatar_url: storedAvatar }));
+      }
     }
   }, [user]);
 
+  // Profilbild hochladen
+  const handleAvatarUpload = async (file: File) => {
+    // Validierung
+    if (!file.type.startsWith('image/')) {
+      setProfilePic(prev => ({ ...prev, error: 'Nur Bilder sind erlaubt (JPG, PNG, WebP)' }));
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setProfilePic(prev => ({ ...prev, error: 'Bild zu groß (max. 5MB)' }));
+      return;
+    }
+    
+    setProfilePic(prev => ({ ...prev, uploading: true, error: null }));
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'avatars');
+      
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Upload fehlgeschlagen');
+      }
+      
+      const data = await res.json();
+      
+      // Avatar URL speichern
+      setProfilePic(prev => ({ ...prev, avatar_url: data.url, uploading: false }));
+      
+      // Im localStorage zwischenspeichern
+      if (user) {
+        localStorage.setItem(`avatar_${user.id}`, data.url);
+      }
+      
+      // Optional: Im Backend speichern
+      // await usersApi.updateAvatar(data.url);
+      
+    } catch (err: any) {
+      setProfilePic(prev => ({ 
+        ...prev, 
+        error: err.message || 'Upload fehlgeschlagen', 
+        uploading: false 
+      }));
+    }
+  };
+  
+  // Profilbild entfernen
+  const removeAvatar = () => {
+    setProfilePic(prev => ({ ...prev, avatar_url: null }));
+    if (user) {
+      localStorage.removeItem(`avatar_${user.id}`);
+    }
+  };
+  
+  // Drag & Drop Handler
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleAvatarUpload(file);
+  };
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  
   // Profil speichern
   const handleSave = async () => {
     setError(null);
@@ -264,6 +356,14 @@ export default function ProfilePage() {
   const updateField = (field: keyof ProfileData, value: string | boolean) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
+  
+  // Avatar-URL im Header aktualisieren wenn sich das Profilbild ändert
+  useEffect(() => {
+    if (profilePic.avatar_url && user) {
+      // Hier könnte man das Avatar im User-Objekt aktualisieren
+      // setUser(prev => prev ? { ...prev, avatar_url: profilePic.avatar_url } : null);
+    }
+  }, [profilePic.avatar_url, user, setUser]);
 
   if (!user) {
     return (
@@ -307,9 +407,34 @@ export default function ProfilePage() {
       {/* Profil-Header mit Avatar */}
       <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl p-6 text-white">
         <div className="flex items-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold">
-            {user.first_name?.[0]}{user.last_name?.[0]}
+          <div className="relative">
+            {profilePic.avatar_url ? (
+              <img 
+                src={profilePic.avatar_url} 
+                alt="Profilbild" 
+                className="w-20 h-20 rounded-full object-cover border-2 border-white"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold">
+                {user.first_name?.[0]}{user.last_name?.[0]}
+              </div>
+            )}
+            
+            {/* Upload Button */}
+            <label className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 cursor-pointer hover:bg-gray-100 transition-colors shadow-md">
+              <Camera className="w-4 h-4 text-primary-600" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleAvatarUpload(file);
+                }}
+                className="hidden"
+              />
+            </label>
           </div>
+          
           <div>
             <h2 className="text-2xl font-bold">{user.first_name} {user.last_name}</h2>
             <p className="text-white/80">{user.email}</p>
@@ -335,6 +460,83 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Profilbild */}
+      <ProfileCard title="Profilbild" icon={Camera}>
+        <div className="space-y-4">
+          <div className="flex items-start gap-6">
+            {/* Aktuelles Bild */}
+            <div className="flex-shrink-0">
+              {profilePic.avatar_url ? (
+                <div className="relative">
+                  <img 
+                    src={profilePic.avatar_url} 
+                    alt="Profilbild" 
+                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
+                  />
+                  <button
+                    onClick={removeAvatar}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border-4 border-gray-200">
+                  <span className="text-2xl font-bold text-gray-400">
+                    {user.first_name?.[0]}{user.last_name?.[0]}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {/* Upload Bereich */}
+            <div className="flex-1">
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer bg-gray-50"
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarUpload(file);
+                  }}
+                  className="hidden"
+                  id="avatar-upload"
+                />
+                <label htmlFor="avatar-upload" className="cursor-pointer">
+                  {profilePic.uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+                      <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <ImagePlus className="w-8 h-8 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700">Bild hochladen</span>
+                      <span className="text-xs text-gray-500">JPG, PNG, WebP (max. 5MB)</span>
+                      <span className="text-xs text-gray-400 mt-1">Oder per Drag & Drop</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+              
+              {profilePic.error && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {profilePic.error}
+                </div>
+              )}
+              
+              <p className="mt-3 text-sm text-gray-600">
+                Empfohlene Größe: 400 × 400 Pixel (Quadratformat)
+              </p>
+            </div>
+          </div>
+        </div>
+      </ProfileCard>
+      
       {/* Persönliche Daten */}
       <ProfileCard title="Persönliche Daten" icon={User}>
         <div className="grid sm:grid-cols-2 gap-4">
