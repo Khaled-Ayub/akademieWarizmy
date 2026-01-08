@@ -189,17 +189,22 @@ export const authApi = {
     last_name: string;
     phone?: string;
   }) => {
+    console.log('[authApi.register] Starting registration for:', data.email);
     // Use same-origin proxy to avoid CORS / misconfigured base URL issues
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    console.log('[authApi.register] Response status:', res.status);
     const json = await res.json().catch(() => ({}));
+    console.log('[authApi.register] Response body:', json);
     if (!res.ok) {
+      console.error('[authApi.register] Registration failed:', json);
       // Normalize error shape for callers
       throw new Error(json?.detail || json?.error || 'Registrierung fehlgeschlagen');
     }
+    console.log('[authApi.register] Registration successful');
     return json;
   },
 
@@ -207,13 +212,17 @@ export const authApi = {
    * Benutzer anmelden
    */
   login: async (email: string, password: string) => {
+    console.log('[authApi.login] Starting login for:', email);
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
+    console.log('[authApi.login] Response status:', res.status);
     const json = await res.json().catch(() => ({}));
+    console.log('[authApi.login] Response body:', json);
     if (!res.ok) {
+      console.error('[authApi.login] Login failed:', json);
       throw new Error(json?.detail || json?.error || 'Login fehlgeschlagen');
     }
 
@@ -221,11 +230,12 @@ export const authApi = {
     
     // Validate response
     if (!access_token || !user) {
-      console.error('Login response missing required fields:', json);
+      console.error('[authApi.login] Response missing required fields:', json);
       throw new Error('Login fehlgeschlagen: Ungültige Server-Antwort');
     }
     
     // Tokens speichern
+    console.log('[authApi.login] Saving tokens and returning user');
     setAccessToken(access_token);
     if (refresh_token) {
       setRefreshToken(refresh_token);

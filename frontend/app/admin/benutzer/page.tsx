@@ -194,8 +194,19 @@ export default function AdminUsersPage() {
   const handleUserAction = async (action: string, userId: string) => {
     if (action === 'delete') {
       if (!confirm('Benutzer wirklich löschen?')) return;
-      // TODO: Delete API call
-      toast.info('Löschen wird noch implementiert');
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error?.detail || error?.error || 'Löschen fehlgeschlagen');
+        }
+        toast.success('Benutzer wurde gelöscht');
+        loadUsers(); // Refresh list
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Fehler beim Löschen');
+      }
     } else if (action === 'role') {
       // TODO: Role change modal
       toast.info('Rollenänderung wird noch implementiert');

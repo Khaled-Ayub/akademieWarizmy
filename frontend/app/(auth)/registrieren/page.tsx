@@ -50,24 +50,29 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     setError(null);
     try {
+      console.log('[Register] Starting registration...');
       const user = await doRegister({
         email: data.email,
         password: data.password,
         first_name: data.first_name,
         last_name: data.last_name,
       });
+      console.log('[Register] Registration complete, user:', user);
 
       const next = searchParams.get('next');
       const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
 
       // Students go to onboarding if needed
       if (user?.role === 'student' && !user?.onboarding_completed) {
+        console.log('[Register] Redirecting to onboarding...');
         router.push(`/onboarding?next=${encodeURIComponent(safeNext)}`);
         return;
       }
 
+      console.log('[Register] Redirecting to:', safeNext);
       router.push(safeNext);
     } catch (err) {
+      console.error('[Register] Error:', err);
       setError(getErrorMessage(err));
     }
   };

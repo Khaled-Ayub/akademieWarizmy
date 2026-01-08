@@ -361,6 +361,34 @@ async def change_user_role(
     return {"message": f"Rolle geändert zu {role}"}
 
 
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: str,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Benutzer löschen (Admin)"""
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    # Verhindern, dass Admin sich selbst löscht
+    if str(user.id) == str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sie können sich nicht selbst löschen"
+        )
+    
+    await db.delete(user)
+    await db.commit()
+    
+    return None
+
+
 # =========================================
 # Klassen-Verwaltung
 # =========================================
