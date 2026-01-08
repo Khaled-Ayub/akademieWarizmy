@@ -87,6 +87,13 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
   // Render
   // =========================================
 
+  // Banner-Sichtbarkeit kommunizieren
+  useEffect(() => {
+    const isVisible = !isLoading && announcements.length > 0 && !isClosed;
+    localStorage.setItem('announcement-banner-visible', isVisible ? 'true' : 'false');
+    window.dispatchEvent(new Event('storage'));
+  }, [isLoading, announcements.length, isClosed]);
+
   // Nichts anzeigen wenn keine Ankündigungen, noch lädt oder geschlossen
   if (isLoading || announcements.length === 0 || isClosed) {
     return null;

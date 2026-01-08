@@ -104,8 +104,8 @@ export default function RootLayout({
           __html: `
             (function() {
               function updatePadding() {
-                const closed = localStorage.getItem('announcement-banner-closed');
-                document.documentElement.style.setProperty('--banner-height', closed === 'true' ? '0px' : '48px');
+                const visible = localStorage.getItem('announcement-banner-visible');
+                document.documentElement.style.setProperty('--banner-height', visible === 'true' ? '48px' : '0px');
               }
               updatePadding();
               window.addEventListener('storage', updatePadding);
@@ -113,7 +113,7 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className="font-sans antialiased bg-background-light text-gray-900 min-h-screen" style={{ paddingTop: 'var(--banner-height, 48px)', transition: 'padding-top 0.3s ease' }}>
+      <body className="font-sans antialiased bg-background-light text-gray-900 min-h-screen" style={{ paddingTop: 'var(--banner-height, 0px)', transition: 'padding-top 0.3s ease' }}>
         {/* Ankündigungs-Banner - erscheint ganz oben */}
         <AnnouncementBanner />
         {children}

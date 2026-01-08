@@ -11,18 +11,16 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [bannerClosed, setBannerClosed] = useState(false);
+  const [bannerVisible, setBannerVisible] = useState(false);
   const { user, isAuthenticated, logout, checkAuth } = useAuthStore();
   const pathname = usePathname();
 
   // Check auth on mount to ensure correct state on public pages
   useEffect(() => {
     checkAuth();
-    // Prüfe ob Banner geschlossen wurde
-    const closed = localStorage.getItem('announcement-banner-closed');
-    if (closed === 'true') {
-      setBannerClosed(true);
-    }
+    // Prüfe ob Banner sichtbar ist
+    const visible = localStorage.getItem('announcement-banner-visible');
+    setBannerVisible(visible === 'true');
   }, [checkAuth]);
 
   // Handle scroll effect
@@ -34,11 +32,11 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Höre auf localStorage-Änderungen (Banner-Schließen)
+  // Höre auf localStorage-Änderungen (Banner-Sichtbarkeit)
   useEffect(() => {
     const handleStorageChange = () => {
-      const closed = localStorage.getItem('announcement-banner-closed');
-      setBannerClosed(closed === 'true');
+      const visible = localStorage.getItem('announcement-banner-visible');
+      setBannerVisible(visible === 'true');
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -56,7 +54,7 @@ export default function Navbar() {
 
   return (
     <header 
-      className={`sticky ${bannerClosed ? 'top-0' : 'top-12'} left-0 right-0 z-40 transition-all duration-300 ${
+      className={`sticky ${bannerVisible ? 'top-12' : 'top-0'} left-0 right-0 z-40 transition-all duration-300 ${
         scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 py-2' : 'bg-white/80 backdrop-blur-sm py-4'
       }`}
     >
