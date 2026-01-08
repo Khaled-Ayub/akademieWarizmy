@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { X } from 'lucide-react';
 
 // =========================================
 // TypeScript Typen (neue flache Struktur von FastAPI)
@@ -46,6 +47,8 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
   const [isLoading, setIsLoading] = useState(!initialAnnouncements);
   // State für Animation pausieren (bei Hover)
   const [isPaused, setIsPaused] = useState(false);
+  // State für geschlossen
+  const [isClosed, setIsClosed] = useState(false);
 
   // =========================================
   // Ankündigungen laden
@@ -84,8 +87,8 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
   // Render
   // =========================================
 
-  // Nichts anzeigen wenn keine Ankündigungen oder noch lädt
-  if (isLoading || announcements.length === 0) {
+  // Nichts anzeigen wenn keine Ankündigungen, noch lädt oder geschlossen
+  if (isLoading || announcements.length === 0 || isClosed) {
     return null;
   }
 
@@ -127,10 +130,18 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
   return (
     <div 
-      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-hidden fixed top-16 left-0 right-0 z-40 shadow-lg"
+      className="announcement-banner bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white overflow-hidden relative z-50 shadow-lg"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
+      {/* Schließen-Button */}
+      <button
+        onClick={() => setIsClosed(true)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-1 hover:bg-white/20 rounded-full transition-colors"
+        aria-label="Ankündigung schließen"
+      >
+        <X className="w-4 h-4" />
+      </button>
       {/* Container für den scrollenden Text */}
       <div className="py-2.5 whitespace-nowrap">
         {/* Erster Text (scrollt) */}
@@ -168,7 +179,7 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
 
       {/* Gradient-Overlay an den Seiten für besseren Übergang */}
       <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-red-600 to-transparent pointer-events-none z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-red-600 to-transparent pointer-events-none z-10" />
+      <div className="absolute right-8 top-0 bottom-0 w-12 bg-gradient-to-l from-red-600 to-transparent pointer-events-none z-10" />
     </div>
   );
 }
