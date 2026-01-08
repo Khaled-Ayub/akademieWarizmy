@@ -58,7 +58,7 @@ export default function LessonAccessCheck({
       // Prüfe Einschreibung
       const enrollments = await usersApi.getMyEnrollments();
       const enrolled = enrollments.some(
-        (e: any) => e.course?.id === courseId
+        (e: any) => String(e.course?.id).toLowerCase() === String(courseId).toLowerCase()
       );
       setHasAccess(enrolled);
     } catch (error) {
