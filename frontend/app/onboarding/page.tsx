@@ -109,7 +109,8 @@ function OnboardingInner() {
       }
 
       toast.success('Profil gespeichert!');
-      router.push(next);
+      // Use window.location for reliable redirect after state changes
+      window.location.href = next;
     } catch (err: any) {
       console.error('Onboarding save error:', err);
       toast.error(err?.message || 'Speichern fehlgeschlagen');

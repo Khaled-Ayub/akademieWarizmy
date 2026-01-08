@@ -52,18 +52,22 @@ export default function RegisterPage() {
     try {
       console.log('[Register] Starting registration...');
       const user = await doRegister({
-        email: data.email,
+        email: data.email.toLowerCase().trim(),
         password: data.password,
-        first_name: data.first_name,
-        last_name: data.last_name,
+        first_name: data.first_name.trim(),
+        last_name: data.last_name.trim(),
       });
       console.log('[Register] Registration complete, user:', user);
+
+      if (!user) {
+        throw new Error('Registrierung fehlgeschlagen: Kein Benutzerobjekt erhalten');
+      }
 
       const next = searchParams.get('next');
       const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
 
       // Students go to onboarding if needed
-      if (user?.role === 'student' && !user?.onboarding_completed) {
+      if (user.role === 'student' && !user.onboarding_completed) {
         console.log('[Register] Redirecting to onboarding...');
         router.push(`/onboarding?next=${encodeURIComponent(safeNext)}`);
         return;

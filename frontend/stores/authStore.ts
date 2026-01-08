@@ -112,11 +112,24 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         
         try {
+          console.log('[authStore] Starting registration...');
           await authApi.register(data);
+          console.log('[authStore] Registration successful, starting auto-login...');
+          
           // Nach Registrierung automatisch einloggen
-          const user = await get().login(data.email, data.password);
+          const { user } = await authApi.login(data.email, data.password);
+          console.log('[authStore] Auto-login successful:', user);
+          
+          // Store aktualisieren
+          set({ 
+            user, 
+            isAuthenticated: true, 
+            isLoading: false 
+          });
+          
           return user;
         } catch (error) {
+          console.error('[authStore] Registration/Login error:', error);
           set({ isLoading: false });
           throw error;
         }

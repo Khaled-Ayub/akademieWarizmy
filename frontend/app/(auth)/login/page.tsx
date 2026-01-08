@@ -61,10 +61,11 @@ export default function LoginPage() {
         next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
       // If student hasn't completed onboarding, force onboarding first.
       if (user?.role === 'student' && !user?.onboarding_completed) {
-        router.push(`/onboarding?next=${encodeURIComponent(safeNext)}`);
+        // Use window.location for reliable redirect after state changes
+        window.location.href = `/onboarding?next=${encodeURIComponent(safeNext)}`;
         return;
       }
-      router.push(safeNext);
+      window.location.href = safeNext;
     } catch (err) {
       setError(getErrorMessage(err));
     }

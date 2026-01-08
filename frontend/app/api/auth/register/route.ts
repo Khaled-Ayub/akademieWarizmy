@@ -14,12 +14,15 @@ const API_URL = normalizeApiUrl(RAW_API_URL);
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log('[API /auth/register] Received registration request for:', body.email);
 
     const res = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+
+    console.log('[API /auth/register] Backend response status:', res.status);
 
     const text = await res.text();
     let data: any = null;
@@ -29,9 +32,15 @@ export async function POST(request: NextRequest) {
       data = { detail: text };
     }
 
+    if (!res.ok) {
+      console.error('[API /auth/register] Registration failed:', data);
+    } else {
+      console.log('[API /auth/register] Registration successful');
+    }
+
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    console.error('Register proxy error:', error);
+    console.error('[API /auth/register] Proxy error:', error);
     return NextResponse.json({ detail: 'Register failed' }, { status: 500 });
   }
 }

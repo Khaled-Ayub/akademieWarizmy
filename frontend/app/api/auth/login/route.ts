@@ -17,6 +17,13 @@ export async function POST(request: NextRequest) {
     const email = String(body?.email || '').trim();
     const password = String(body?.password || '');
 
+    console.log('[API /auth/login] Login attempt for:', email);
+
+    if (!email || !password) {
+      console.error('[API /auth/login] Missing email or password');
+      return NextResponse.json({ detail: 'E-Mail und Passwort sind erforderlich' }, { status: 400 });
+    }
+
     const form = new URLSearchParams();
     form.append('username', email);
     form.append('password', password);
@@ -27,6 +34,8 @@ export async function POST(request: NextRequest) {
       body: form.toString(),
     });
 
+    console.log('[API /auth/login] Backend response status:', res.status);
+
     const text = await res.text();
     let data: any = null;
     try {
@@ -35,9 +44,15 @@ export async function POST(request: NextRequest) {
       data = { detail: text };
     }
 
+    if (!res.ok) {
+      console.error('[API /auth/login] Login failed:', data?.detail);
+    } else {
+      console.log('[API /auth/login] Login successful');
+    }
+
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    console.error('Login proxy error:', error);
+    console.error('[API /auth/login] Proxy error:', error);
     return NextResponse.json({ detail: 'Login failed' }, { status: 500 });
   }
 }
