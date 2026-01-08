@@ -145,8 +145,6 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
         >
           <span className="inline-flex items-center text-sm md:text-base tracking-wide font-[var(--font-poppins)]">
             {/* Passende Emojis für roten Hintergrund */}
-            <span className="mr-3 text-lg">🔥</span>
-            <span className="mr-2 text-yellow-300">⚡</span>
             {announcementText}
             {/* Leerzeichen am Ende für nahtlosen Übergang */}
             <span className="mx-12 text-white/40">✦</span>
