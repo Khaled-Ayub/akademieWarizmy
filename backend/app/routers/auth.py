@@ -12,6 +12,8 @@ from sqlalchemy import select
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+import resend
 import secrets
 
 from app.db.session import get_db
@@ -21,6 +23,13 @@ from app.models.user import User, UserRole
 # Settings & Router
 settings = get_settings()
 router = APIRouter()
+
+# Resend API initialisieren
+if settings.RESEND_API_KEY:
+    resend.api_key = settings.RESEND_API_KEY
+
+# Token-Serializer für E-Mail-Verifizierung
+email_serializer = URLSafeTimedSerializer(settings.JWT_SECRET)
 
 # =========================================
 # Passwort-Hashing
@@ -88,6 +97,11 @@ class PasswordResetConfirm(BaseModel):
     """Schema für Passwort-Zurücksetzung Bestätigung"""
     token: str
     new_password: str
+
+
+class EmailVerificationRequest(BaseModel):
+    """Schema für erneute Verifizierungs-E-Mail"""
+    email: EmailStr
 
 
 class LoginResponse(BaseModel):
@@ -166,6 +180,54 @@ def create_refresh_token(data: dict) -> str:
     )
     
     return encoded_jwt
+
+
+# =========================================
+# E-Mail-Verifizierung Funktionen
+# =========================================
+def create_email_verification_token(email: str) -> str:
+    """Erstellt einen signierten Token für E-Mail-Verifizierung"""
+    return email_serializer.dumps(email, salt="email-verify")
+
+
+def verify_email_token(token: str) -> Optional[str]:
+    """Prüft den Verifizierungs-Token und gibt die E-Mail zurück"""
+    try:
+        max_age = settings.EMAIL_VERIFICATION_EXPIRE_HOURS * 3600
+        return email_serializer.loads(token, salt="email-verify", max_age=max_age)
+    except (SignatureExpired, BadSignature):
+        return None
+
+
+async def send_verification_email(email: str, first_name: str, token: str):
+    """Sendet die Verifizierungs-E-Mail über Resend"""
+    if not settings.RESEND_API_KEY:
+        print(f"[DEV] Verifizierungs-Link für {email}: {settings.FRONTEND_URL}/verify-email?token={token}")
+        return
+    
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    
+    try:
+        resend.Emails.send({
+            "from": f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>",
+            "to": [email],
+            "subject": "Bestätige deine E-Mail-Adresse - WARIZMY Education",
+            "html": f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #10388c;">Willkommen bei WARIZMY Education!</h2>
+                <p>Hallo {first_name},</p>
+                <p>Vielen Dank für deine Registrierung. Bitte bestätige deine E-Mail-Adresse, indem du auf den folgenden Button klickst:</p>
+                <p style="text-align: center; margin: 30px 0;">
+                    <a href="{verify_url}" style="background-color: #10388c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">E-Mail bestätigen</a>
+                </p>
+                <p>Oder kopiere diesen Link in deinen Browser:</p>
+                <p style="word-break: break-all; color: #666;">{verify_url}</p>
+                <p style="color: #999; font-size: 12px; margin-top: 30px;">Der Link ist {settings.EMAIL_VERIFICATION_EXPIRE_HOURS} Stunden gültig.</p>
+            </div>
+            """
+        })
+    except Exception as e:
+        print(f"Fehler beim Senden der Verifizierungs-E-Mail: {e}")
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
@@ -304,8 +366,9 @@ async def register(
     await db.commit()
     await db.refresh(new_user)
     
-    # TODO: Willkommens-E-Mail senden (Background Task)
-    # background_tasks.add_task(send_welcome_email, new_user.email, new_user.first_name)
+    # Verifizierungs-E-Mail senden
+    token = create_email_verification_token(new_user.email)
+    background_tasks.add_task(send_verification_email, new_user.email, new_user.first_name, token)
     
     return UserResponse(
         id=str(new_user.id),
@@ -539,6 +602,63 @@ async def reset_password(
     await db.commit()
     
     return {"message": "Passwort erfolgreich geändert"}
+
+
+@router.get("/verify-email", status_code=status.HTTP_200_OK)
+async def verify_email(
+    token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    E-Mail-Adresse verifizieren.
+    
+    Der Token wird bei der Registrierung per E-Mail gesendet.
+    """
+    email = verify_email_token(token)
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ungültiger oder abgelaufener Verifizierungs-Link"
+        )
+    
+    # Benutzer laden
+    user = await get_user_by_email(db, email.lower())
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Benutzer nicht gefunden"
+        )
+    
+    if user.email_verified:
+        return {"message": "E-Mail bereits bestätigt"}
+    
+    # E-Mail als verifiziert markieren
+    user.email_verified = True
+    await db.commit()
+    
+    return {"message": "E-Mail erfolgreich bestätigt!"}
+
+
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+async def resend_verification(
+    data: EmailVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verifizierungs-E-Mail erneut senden.
+    
+    Gibt immer 200 zurück (Sicherheit: keine Info ob E-Mail existiert).
+    """
+    user = await get_user_by_email(db, data.email.lower())
+    
+    if user and not user.email_verified:
+        token = create_email_verification_token(user.email)
+        background_tasks.add_task(send_verification_email, user.email, user.first_name, token)
+    
+    return {"message": "Falls die E-Mail registriert ist, wurde ein Bestätigungs-Link gesendet."}
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

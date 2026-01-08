@@ -81,15 +81,12 @@ class Settings(BaseSettings):
     VIMEO_ACCESS_TOKEN: Optional[str] = None
     
     # =========================================
-    # E-Mail (SMTP)
+    # E-Mail (Resend)
     # =========================================
-    SMTP_HOST: str = "smtp.resend.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    SMTP_TLS: bool = True
+    RESEND_API_KEY: Optional[str] = None
     EMAIL_FROM: str = "noreply@warizmy.com"
     EMAIL_FROM_NAME: str = "WARIZMY Education"
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = 24
     
     # =========================================
     # CORS (Cross-Origin Resource Sharing)

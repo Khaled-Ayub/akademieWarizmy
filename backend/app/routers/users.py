@@ -335,15 +335,18 @@ async def get_my_enrollments(
                 )
                 completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
                 
-                # Erste nicht abgeschlossene Lektion finden
+                # Erste nicht abgeschlossene Lektion finden (mit gültigem Slug)
                 for lesson in all_lessons:
-                    if lesson.id not in completed_lesson_ids:
+                    if lesson.id not in completed_lesson_ids and lesson.slug:
                         next_lesson_slug = lesson.slug
                         break
                 
-                # Falls alle abgeschlossen, nimm die erste Lektion
+                # Falls alle abgeschlossen, nimm die erste Lektion mit Slug
                 if not next_lesson_slug and all_lessons:
-                    next_lesson_slug = all_lessons[0].slug
+                    for lesson in all_lessons:
+                        if lesson.slug:
+                            next_lesson_slug = lesson.slug
+                            break
             
             enrollments_list.append({
                 "id": str(ce.id),
@@ -418,15 +421,18 @@ async def get_my_enrollments(
             )
             completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
             
-            # Erste nicht abgeschlossene Lektion finden
+            # Erste nicht abgeschlossene Lektion finden (mit gültigem Slug)
             for lesson in all_lessons:
-                if lesson.id not in completed_lesson_ids:
+                if lesson.id not in completed_lesson_ids and lesson.slug:
                     next_lesson_slug = lesson.slug
                     break
             
-            # Falls alle abgeschlossen, nimm die erste Lektion
+            # Falls alle abgeschlossen, nimm die erste Lektion mit Slug
             if not next_lesson_slug and all_lessons:
-                next_lesson_slug = all_lessons[0].slug
+                for lesson in all_lessons:
+                    if lesson.slug:
+                        next_lesson_slug = lesson.slug
+                        break
         
         enrollments_list.append({
             "id": str(e.id),
@@ -739,15 +745,18 @@ async def get_student_dashboard(
                 )
                 completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
                 
-                # Erste nicht abgeschlossene Lektion finden
+                # Erste nicht abgeschlossene Lektion finden (mit gültigem Slug)
                 for lesson in all_lessons:
-                    if lesson.id not in completed_lesson_ids:
+                    if lesson.id not in completed_lesson_ids and lesson.slug:
                         next_lesson_slug = lesson.slug
                         break
                 
-                # Falls alle abgeschlossen, nimm die erste Lektion
+                # Falls alle abgeschlossen, nimm die erste Lektion mit Slug
                 if not next_lesson_slug and all_lessons:
-                    next_lesson_slug = all_lessons[0].slug
+                    for lesson in all_lessons:
+                        if lesson.slug:
+                            next_lesson_slug = lesson.slug
+                            break
             
             my_courses.append({
                 "id": str(course.id),
@@ -824,15 +833,18 @@ async def get_student_dashboard(
             )
             completed_lesson_ids = set(row[0] for row in completed_ids_result.fetchall())
             
-            # Erste nicht abgeschlossene Lektion finden
+            # Erste nicht abgeschlossene Lektion finden (mit gültigem Slug)
             for lesson in all_lessons:
-                if lesson.id not in completed_lesson_ids:
+                if lesson.id not in completed_lesson_ids and lesson.slug:
                     next_lesson_slug = lesson.slug
                     break
             
-            # Falls alle abgeschlossen, nimm die erste Lektion
+            # Falls alle abgeschlossen, nimm die erste Lektion mit Slug
             if not next_lesson_slug and all_lessons:
-                next_lesson_slug = all_lessons[0].slug
+                for lesson in all_lessons:
+                    if lesson.slug:
+                        next_lesson_slug = lesson.slug
+                        break
         
         my_courses.append({
             "id": str(course.id),
