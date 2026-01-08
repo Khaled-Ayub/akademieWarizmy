@@ -5,6 +5,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   GraduationCap, 
@@ -21,40 +22,60 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Euro,
-  Bell
+  Bell,
+  Loader2
 } from 'lucide-react';
+import { dashboardApi } from '@/lib/api';
 
 // =========================================
-// Mock Data (später durch API ersetzen)
+// Typen
 // =========================================
-const stats = {
-  courses: 12,
-  lessons: 156,
-  students: 234,
-  teachers: 8,
-  revenue: 15420,
-  revenueChange: '+12%',
-  newStudents: 18,
-  newStudentsChange: '+5',
-};
+interface AdminStats {
+  students: number;
+  courses: number;
+  lessons: number;
+  revenue: number;
+  revenue_change: string;
+  new_students_change: string;
+}
 
-const recentRegistrations = [
-  { id: 1, name: 'Ahmad Hassan', email: 'ahmad@example.com', date: '2026-01-05', status: 'pending' },
-  { id: 2, name: 'Fatima Ali', email: 'fatima@example.com', date: '2026-01-05', status: 'verified' },
-  { id: 3, name: 'Omar Khan', email: 'omar@example.com', date: '2026-01-04', status: 'verified' },
-  { id: 4, name: 'Sara Ahmed', email: 'sara@example.com', date: '2026-01-04', status: 'pending' },
-];
+interface Registration {
+  id: string;
+  name: string;
+  email: string;
+  date: string;
+  status: string;
+}
 
-const recentPayments = [
-  { id: 1, user: 'Ahmad Hassan', amount: 199, course: 'Arabisch für Anfänger', status: 'completed', date: '2026-01-05' },
-  { id: 2, user: 'Fatima Ali', amount: 299, course: 'Quran Rezitation', status: 'completed', date: '2026-01-04' },
-  { id: 3, user: 'Omar Khan', amount: 149, course: 'Sira Kompakt', status: 'pending', date: '2026-01-04' },
-];
+interface Payment {
+  id: string;
+  user: string;
+  amount: number;
+  course: string;
+  status: string;
+  date: string;
+}
 
-const todaysSessions = [
-  { id: 1, title: 'Arabisch A1', time: '18:00', teacher: 'Ustadh Ahmad', students: 15 },
-  { id: 2, title: 'Tajweed', time: '20:00', teacher: 'Ustadha Fatima', students: 8 },
-];
+interface TodaySession {
+  id: string;
+  title: string;
+  time: string;
+  teacher: string;
+  students: number;
+}
+
+interface PendingActions {
+  verifications: number;
+  payments: number;
+}
+
+interface AdminDashboardData {
+  stats: AdminStats;
+  registrations: Registration[];
+  payments: Payment[];
+  sessions: TodaySession[];
+  pending_actions: PendingActions;
+}
 
 // =========================================
 // Statistik-Karte
@@ -150,7 +171,7 @@ function QuickActions() {
 // =========================================
 // Neue Registrierungen
 // =========================================
-function RecentRegistrations() {
+function RecentRegistrations({ registrations }: { registrations: Registration[] }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -160,34 +181,40 @@ function RecentRegistrations() {
         </Link>
       </div>
       <div className="divide-y divide-gray-100">
-        {recentRegistrations.map((user) => (
-          <div key={user.id} className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-600">
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </span>
+        {registrations.length > 0 ? (
+          registrations.map((user) => (
+            <div key={user.id} className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <span className="text-sm font-medium text-gray-600">
+                    {user.name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{user.name}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-gray-900">{user.name}</p>
-                <p className="text-sm text-gray-500">{user.email}</p>
+              <div className="flex items-center gap-2">
+                {user.status === 'verified' ? (
+                  <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Verifiziert
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                    <Clock className="w-3 h-3" />
+                    Ausstehend
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {user.status === 'verified' ? (
-                <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Verifiziert
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                  <Clock className="w-3 h-3" />
-                  Ausstehend
-                </span>
-              )}
-            </div>
+          ))
+        ) : (
+          <div className="p-6 text-center text-gray-500">
+            Keine neuen Registrierungen
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -196,7 +223,7 @@ function RecentRegistrations() {
 // =========================================
 // Letzte Zahlungen
 // =========================================
-function RecentPayments() {
+function RecentPayments({ payments }: { payments: Payment[] }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -206,22 +233,28 @@ function RecentPayments() {
         </Link>
       </div>
       <div className="divide-y divide-gray-100">
-        {recentPayments.map((payment) => (
-          <div key={payment.id} className="p-4 flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">{payment.user}</p>
-              <p className="text-sm text-gray-500">{payment.course}</p>
+        {payments.length > 0 ? (
+          payments.map((payment) => (
+            <div key={payment.id} className="p-4 flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900">{payment.user}</p>
+                <p className="text-sm text-gray-500">{payment.course}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold text-gray-900">€{payment.amount}</p>
+                {payment.status === 'completed' ? (
+                  <span className="text-xs text-green-600">Bezahlt</span>
+                ) : (
+                  <span className="text-xs text-orange-600">Ausstehend</span>
+                )}
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-semibold text-gray-900">€{payment.amount}</p>
-              {payment.status === 'completed' ? (
-                <span className="text-xs text-green-600">Bezahlt</span>
-              ) : (
-                <span className="text-xs text-orange-600">Ausstehend</span>
-              )}
-            </div>
+          ))
+        ) : (
+          <div className="p-6 text-center text-gray-500">
+            Keine Zahlungen
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -230,7 +263,7 @@ function RecentPayments() {
 // =========================================
 // Heutige Sessions
 // =========================================
-function TodaysSessions() {
+function TodaysSessions({ sessions }: { sessions: TodaySession[] }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
@@ -239,9 +272,9 @@ function TodaysSessions() {
           Kalender →
         </Link>
       </div>
-      {todaysSessions.length > 0 ? (
+      {sessions.length > 0 ? (
         <div className="divide-y divide-gray-100">
-          {todaysSessions.map((session) => (
+          {sessions.map((session) => (
             <div key={session.id} className="p-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-gray-900">{session.title}</span>
@@ -267,6 +300,56 @@ function TodaysSessions() {
 // Hauptseite
 // =========================================
 export default function AdminDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await dashboardApi.getAdminDashboard();
+      setDashboardData(data);
+    } catch (err: any) {
+      console.error('Dashboard laden fehlgeschlagen:', err);
+      setError('Dashboard konnte nicht geladen werden');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-600">{error}</p>
+        <button 
+          onClick={loadDashboard}
+          className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
+  }
+
+  const stats = dashboardData?.stats || { students: 0, courses: 0, lessons: 0, revenue: 0, revenue_change: '0%', new_students_change: '+0' };
+  const registrations = dashboardData?.registrations || [];
+  const payments = dashboardData?.payments || [];
+  const sessions = dashboardData?.sessions || [];
+  const pendingActions = dashboardData?.pending_actions || { verifications: 0, payments: 0 };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -280,7 +363,7 @@ export default function AdminDashboard() {
         <StatCard
           title="Studenten"
           value={stats.students}
-          change={`${stats.newStudentsChange} diese Woche`}
+          change={`${stats.new_students_change} diese Woche`}
           changeType="positive"
           icon={Users}
           href="/admin/benutzer"
@@ -303,7 +386,7 @@ export default function AdminDashboard() {
         <StatCard
           title="Einnahmen (Monat)"
           value={`€${stats.revenue.toLocaleString('de-DE')}`}
-          change={stats.revenueChange}
+          change={stats.revenue_change}
           changeType="positive"
           icon={Euro}
           href="/admin/zahlungen"
@@ -316,30 +399,36 @@ export default function AdminDashboard() {
         {/* Linke Spalte */}
         <div className="lg:col-span-2 space-y-6">
           {/* Alerts */}
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-orange-800">3 ausstehende Aktionen</h4>
-                <ul className="text-sm text-orange-700 mt-1 space-y-1">
-                  <li>• 2 Registrierungen müssen verifiziert werden</li>
-                  <li>• 1 Zahlung muss bestätigt werden (Überweisung)</li>
-                </ul>
+          {(pendingActions.verifications > 0 || pendingActions.payments > 0) && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-orange-800">{pendingActions.verifications + pendingActions.payments} ausstehende Aktionen</h4>
+                  <ul className="text-sm text-orange-700 mt-1 space-y-1">
+                    {pendingActions.verifications > 0 && (
+                      <li>• {pendingActions.verifications} Registrierungen müssen verifiziert werden</li>
+                    )}
+                    {pendingActions.payments > 0 && (
+                      <li>• {pendingActions.payments} Zahlungen müssen bestätigt werden</li>
+                    )}
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Registrierungen & Zahlungen */}
           <div className="grid md:grid-cols-2 gap-6">
-            <RecentRegistrations />
-            <RecentPayments />
+            <RecentRegistrations registrations={registrations} />
+            <RecentPayments payments={payments} />
           </div>
         </div>
 
         {/* Rechte Spalte */}
         <div className="space-y-6">
           <QuickActions />
-          <TodaysSessions />
+          <TodaysSessions sessions={sessions} />
         </div>
       </div>
     </div>

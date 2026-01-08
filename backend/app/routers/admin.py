@@ -1034,9 +1034,12 @@ async def get_admin_stats(
     db: AsyncSession = Depends(get_db)
 ):
     """Admin Dashboard Statistiken"""
+    from datetime import timedelta
+    from app.models import Lesson
+    
     # Benutzer zählen
     result = await db.execute(select(func.count(User.id)))
-    total_users = result.scalar()
+    total_users = result.scalar() or 0
     
     # Aktive Studenten
     result = await db.execute(
@@ -1044,36 +1047,210 @@ async def get_admin_stats(
         .where(User.role == UserRole.STUDENT)
         .where(User.is_active == True)
     )
-    active_students = result.scalar()
+    active_students = result.scalar() or 0
+    
+    # Lehrer zählen
+    result = await db.execute(
+        select(func.count(User.id))
+        .where(User.role == UserRole.TEACHER)
+    )
+    total_teachers = result.scalar() or 0
+    
+    # Kurse zählen
+    result = await db.execute(select(func.count(Course.id)))
+    total_courses = result.scalar() or 0
+    
+    # Lektionen zählen
+    result = await db.execute(select(func.count(Lesson.id)))
+    total_lessons = result.scalar() or 0
     
     # Aktive Klassen
     result = await db.execute(
         select(func.count(Class.id))
         .where(Class.is_active == True)
     )
-    active_classes = result.scalar()
+    active_classes = result.scalar() or 0
     
-    # Heutige Zahlungen
+    # Monatliche Einnahmen
     today = datetime.utcnow().date()
+    month_start = today.replace(day=1)
     result = await db.execute(
         select(func.sum(Payment.amount))
         .where(Payment.payment_status == PaymentStatus.COMPLETED)
-        .where(func.date(Payment.paid_at) == today)
+        .where(func.date(Payment.paid_at) >= month_start)
     )
-    today_revenue = result.scalar() or 0
+    monthly_revenue = result.scalar() or 0
+    
+    # Neue Studenten diese Woche
+    week_start = today - timedelta(days=today.weekday())
+    result = await db.execute(
+        select(func.count(User.id))
+        .where(User.role == UserRole.STUDENT)
+        .where(func.date(User.created_at) >= week_start)
+    )
+    new_students_week = result.scalar() or 0
     
     # Ausstehende Zahlungen
     result = await db.execute(
         select(func.count(Payment.id))
         .where(Payment.payment_status == PaymentStatus.PENDING)
     )
-    pending_payments = result.scalar()
+    pending_payments = result.scalar() or 0
+    
+    # Unbestätigte Registrierungen
+    result = await db.execute(
+        select(func.count(User.id))
+        .where(User.email_verified == False)
+    )
+    unverified_users = result.scalar() or 0
     
     return {
         "total_users": total_users,
-        "active_students": active_students,
+        "students": active_students,
+        "teachers": total_teachers,
+        "courses": total_courses,
+        "lessons": total_lessons,
         "active_classes": active_classes,
-        "today_revenue": float(today_revenue),
+        "monthly_revenue": float(monthly_revenue),
+        "new_students_week": new_students_week,
         "pending_payments": pending_payments,
+        "unverified_users": unverified_users,
+    }
+
+
+@router.get("/dashboard")
+async def get_admin_dashboard(
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Vollständige Admin Dashboard Daten"""
+    from datetime import timedelta
+    from app.models import Lesson
+    
+    today = datetime.utcnow()
+    
+    # === Statistiken ===
+    result = await db.execute(
+        select(func.count(User.id))
+        .where(User.role == UserRole.STUDENT)
+        .where(User.is_active == True)
+    )
+    total_students = result.scalar() or 0
+    
+    result = await db.execute(select(func.count(Course.id)))
+    total_courses = result.scalar() or 0
+    
+    result = await db.execute(select(func.count(Lesson.id)))
+    total_lessons = result.scalar() or 0
+    
+    # Monatliche Einnahmen
+    month_start = today.date().replace(day=1)
+    result = await db.execute(
+        select(func.sum(Payment.amount))
+        .where(Payment.payment_status == PaymentStatus.COMPLETED)
+        .where(func.date(Payment.paid_at) >= month_start)
+    )
+    monthly_revenue = result.scalar() or 0
+    
+    # Neue Studenten diese Woche
+    week_start = today.date() - timedelta(days=today.weekday())
+    result = await db.execute(
+        select(func.count(User.id))
+        .where(User.role == UserRole.STUDENT)
+        .where(func.date(User.created_at) >= week_start)
+    )
+    new_students_week = result.scalar() or 0
+    
+    # === Neue Registrierungen ===
+    result = await db.execute(
+        select(User)
+        .where(User.role == UserRole.STUDENT)
+        .order_by(User.created_at.desc())
+        .limit(5)
+    )
+    recent_users = result.scalars().all()
+    registrations = [
+        {
+            "id": str(u.id),
+            "name": f"{u.first_name} {u.last_name}",
+            "email": u.email,
+            "date": u.created_at.strftime("%Y-%m-%d"),
+            "status": "verified" if u.email_verified else "pending",
+        }
+        for u in recent_users
+    ]
+    
+    # === Letzte Zahlungen ===
+    result = await db.execute(
+        select(Payment)
+        .options(selectinload(Payment.user))
+        .order_by(Payment.created_at.desc())
+        .limit(5)
+    )
+    recent_payments = result.scalars().all()
+    payments = [
+        {
+            "id": str(p.id),
+            "user": f"{p.user.first_name} {p.user.last_name}" if p.user else "Unbekannt",
+            "amount": float(p.amount),
+            "course": "Kurs",  # TODO: Kursname aus enrollment laden
+            "status": p.payment_status.value,
+            "date": p.created_at.strftime("%Y-%m-%d"),
+        }
+        for p in recent_payments
+    ]
+    
+    # === Heutige Sessions ===
+    today_start = datetime.combine(today.date(), datetime.min.time())
+    today_end = datetime.combine(today.date(), datetime.max.time())
+    result = await db.execute(
+        select(LiveSession)
+        .options(selectinload(LiveSession.class_))
+        .where(LiveSession.scheduled_at >= today_start)
+        .where(LiveSession.scheduled_at <= today_end)
+        .where(LiveSession.is_cancelled == False)
+        .order_by(LiveSession.scheduled_at)
+    )
+    todays_sessions = result.scalars().all()
+    sessions = [
+        {
+            "id": str(s.id),
+            "title": s.title,
+            "time": s.scheduled_at.strftime("%H:%M"),
+            "teacher": "Lehrer",  # TODO: Lehrername laden
+            "students": 0,  # TODO: Teilnehmerzahl
+        }
+        for s in todays_sessions
+    ]
+    
+    # === Ausstehende Aktionen ===
+    result = await db.execute(
+        select(func.count(User.id))
+        .where(User.email_verified == False)
+    )
+    pending_verifications = result.scalar() or 0
+    
+    result = await db.execute(
+        select(func.count(Payment.id))
+        .where(Payment.payment_status == PaymentStatus.PENDING)
+    )
+    pending_payments_count = result.scalar() or 0
+    
+    return {
+        "stats": {
+            "students": total_students,
+            "courses": total_courses,
+            "lessons": total_lessons,
+            "revenue": float(monthly_revenue),
+            "revenue_change": "+12%",  # TODO: Berechnen
+            "new_students_change": f"+{new_students_week}",
+        },
+        "registrations": registrations,
+        "payments": payments,
+        "sessions": sessions,
+        "pending_actions": {
+            "verifications": pending_verifications,
+            "payments": pending_payments_count,
+        },
     }
 

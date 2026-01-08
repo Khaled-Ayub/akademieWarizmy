@@ -559,4 +559,83 @@ export const contentApi = {
   },
 };
 
+// =========================================
+// Dashboard API (für alle Dashboard-Typen)
+// =========================================
+export const dashboardApi = {
+  /**
+   * Studenten-Dashboard Daten abrufen
+   */
+  getStudentDashboard: async () => {
+    const response = await api.get('/users/me/dashboard');
+    return response.data;
+  },
+
+  /**
+   * Lehrer-Dashboard Daten abrufen
+   */
+  getTeacherDashboard: async () => {
+    const response = await api.get('/users/me/teacher-dashboard');
+    return response.data;
+  },
+
+  /**
+   * Admin-Dashboard Daten abrufen
+   */
+  getAdminDashboard: async () => {
+    const response = await api.get('/admin/dashboard');
+    return response.data;
+  },
+
+  /**
+   * Admin-Statistiken abrufen
+   */
+  getAdminStats: async () => {
+    const response = await api.get('/admin/stats');
+    return response.data;
+  },
+};
+
+// =========================================
+// Admin API
+// =========================================
+export const adminApi = {
+  /**
+   * Alle Benutzer abrufen
+   */
+  getUsers: async (params?: { role?: string; search?: string; skip?: number; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.role) searchParams.append('role', params.role);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.skip) searchParams.append('skip', String(params.skip));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    
+    const url = `/admin/users${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  /**
+   * Alle Zahlungen abrufen
+   */
+  getPayments: async (params?: { status?: string; skip?: number; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.skip) searchParams.append('skip', String(params.skip));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    
+    const url = `/admin/payments${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  /**
+   * Alle Klassen abrufen
+   */
+  getClasses: async () => {
+    const response = await api.get('/admin/classes');
+    return response.data;
+  },
+};
+
 export default api;
