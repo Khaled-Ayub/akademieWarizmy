@@ -341,6 +341,78 @@ async def get_upcoming_sessions(
     }
 
 
+@router.get("/unconfirmed")
+async def get_unconfirmed_sessions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Sessions ohne Bestätigung für den aktuellen Benutzer abrufen.
+    Zeigt nur zukünftige Sessions in den nächsten 14 Tagen.
+    """
+    # Meine Klassen-IDs finden
+    result = await db.execute(
+        select(ClassEnrollment.class_id)
+        .where(ClassEnrollment.user_id == current_user.id)
+    )
+    class_ids = [row[0] for row in result.all()]
+    
+    if not class_ids:
+        return {"unconfirmed": []}
+    
+    now = datetime.utcnow()
+    end_date = now + timedelta(days=14)
+    
+    # Sessions laden
+    result = await db.execute(
+        select(LiveSession)
+        .options(selectinload(LiveSession.class_))
+        .where(LiveSession.class_id.in_(class_ids))
+        .where(LiveSession.scheduled_at >= now)
+        .where(LiveSession.scheduled_at <= end_date)
+        .where(LiveSession.is_cancelled == False)
+        .order_by(LiveSession.scheduled_at)
+    )
+    sessions = result.scalars().all()
+    
+    # Meine Bestätigungen laden
+    session_ids = [s.id for s in sessions]
+    result = await db.execute(
+        select(AttendanceConfirmation.live_session_id)
+        .where(AttendanceConfirmation.user_id == current_user.id)
+        .where(AttendanceConfirmation.live_session_id.in_(session_ids))
+    )
+    confirmed_ids = {row[0] for row in result.all()}
+    
+    # Unbestätigte Sessions filtern
+    unconfirmed = []
+    for s in sessions:
+        if s.id not in confirmed_ids:
+            # Tage bis zur Session berechnen
+            days_until = (s.scheduled_at.date() - now.date()).days
+            
+            unconfirmed.append({
+                "id": str(s.id),
+                "title": s.title,
+                "class_name": s.class_.name if s.class_ else None,
+                "scheduled_at": s.scheduled_at.isoformat(),
+                "date": s.scheduled_at.strftime("%Y-%m-%d"),
+                "time": s.scheduled_at.strftime("%H:%M"),
+                "session_type": s.session_type.value,
+                "location": s.location,
+                "days_until": days_until,
+                "is_today": days_until == 0,
+                "is_tomorrow": days_until == 1,
+                "is_urgent": days_until <= 2,
+            })
+    
+    return {
+        "unconfirmed": unconfirmed,
+        "total_count": len(unconfirmed),
+        "urgent_count": sum(1 for s in unconfirmed if s["is_urgent"]),
+    }
+
+
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(
     session_id: str,
@@ -745,77 +817,5 @@ async def update_session_attendance(
         "updated": updated,
         "created": created,
         "message": f"Anwesenheit erfolgreich gespeichert ({created} neu, {updated} aktualisiert)",
-    }
-
-
-@router.get("/unconfirmed")
-async def get_unconfirmed_sessions(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Sessions ohne Bestätigung für den aktuellen Benutzer abrufen.
-    Zeigt nur zukünftige Sessions in den nächsten 14 Tagen.
-    """
-    # Meine Klassen-IDs finden
-    result = await db.execute(
-        select(ClassEnrollment.class_id)
-        .where(ClassEnrollment.user_id == current_user.id)
-    )
-    class_ids = [row[0] for row in result.all()]
-    
-    if not class_ids:
-        return {"unconfirmed": []}
-    
-    now = datetime.utcnow()
-    end_date = now + timedelta(days=14)
-    
-    # Sessions laden
-    result = await db.execute(
-        select(LiveSession)
-        .options(selectinload(LiveSession.class_))
-        .where(LiveSession.class_id.in_(class_ids))
-        .where(LiveSession.scheduled_at >= now)
-        .where(LiveSession.scheduled_at <= end_date)
-        .where(LiveSession.is_cancelled == False)
-        .order_by(LiveSession.scheduled_at)
-    )
-    sessions = result.scalars().all()
-    
-    # Meine Bestätigungen laden
-    session_ids = [s.id for s in sessions]
-    result = await db.execute(
-        select(AttendanceConfirmation.live_session_id)
-        .where(AttendanceConfirmation.user_id == current_user.id)
-        .where(AttendanceConfirmation.live_session_id.in_(session_ids))
-    )
-    confirmed_ids = {row[0] for row in result.all()}
-    
-    # Unbestätigte Sessions filtern
-    unconfirmed = []
-    for s in sessions:
-        if s.id not in confirmed_ids:
-            # Tage bis zur Session berechnen
-            days_until = (s.scheduled_at.date() - now.date()).days
-            
-            unconfirmed.append({
-                "id": str(s.id),
-                "title": s.title,
-                "class_name": s.class_.name if s.class_ else None,
-                "scheduled_at": s.scheduled_at.isoformat(),
-                "date": s.scheduled_at.strftime("%Y-%m-%d"),
-                "time": s.scheduled_at.strftime("%H:%M"),
-                "session_type": s.session_type.value,
-                "location": s.location,
-                "days_until": days_until,
-                "is_today": days_until == 0,
-                "is_tomorrow": days_until == 1,
-                "is_urgent": days_until <= 2,
-            })
-    
-    return {
-        "unconfirmed": unconfirmed,
-        "total_count": len(unconfirmed),
-        "urgent_count": sum(1 for s in unconfirmed if s["is_urgent"]),
     }
 
