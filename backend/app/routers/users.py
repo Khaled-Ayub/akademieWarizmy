@@ -438,14 +438,16 @@ async def get_student_dashboard(
     
     # Sessions diese Woche
     week_end = now + timedelta(days=7)
-    result = await db.execute(
-        select(func.count(LiveSession.id))
-        .where(LiveSession.class_id.in_(class_ids) if class_ids else False)
-        .where(LiveSession.scheduled_at >= now)
-        .where(LiveSession.scheduled_at <= week_end)
-        .where(LiveSession.is_cancelled == False)
-    )
-    sessions_this_week = result.scalar() or 0 if class_ids else 0
+    sessions_this_week = 0
+    if class_ids:
+        result = await db.execute(
+            select(func.count(LiveSession.id))
+            .where(LiveSession.class_id.in_(class_ids))
+            .where(LiveSession.scheduled_at >= now)
+            .where(LiveSession.scheduled_at <= week_end)
+            .where(LiveSession.is_cancelled == False)
+        )
+        sessions_this_week = result.scalar() or 0
     
     # Durchschnittlicher Fortschritt
     result = await db.execute(
