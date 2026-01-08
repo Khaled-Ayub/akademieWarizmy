@@ -20,9 +20,9 @@ from app.routers import (
     courses,
     content,
     upload,
-    homework,
     locations,
 )
+import app.routers.homework as homework_router
 from app.routers.admin_announcements import router as admin_announcements_router
 
 # Haupt-Router für API v1
@@ -161,5 +161,14 @@ api_router.include_router(
     locations.router,
     prefix="/locations",
     tags=["Standorte"]
+)
+
+# =========================================
+# Hausaufgaben
+# =========================================
+api_router.include_router(
+    homework_router.router,
+    prefix="/homework",
+    tags=["Hausaufgaben"]
 )
 

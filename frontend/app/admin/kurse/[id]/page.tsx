@@ -637,6 +637,40 @@ function LessonModal({
   const [homework, setHomework] = useState<HomeworkData[]>([]);
   const [saving, setSaving] = useState(false);
   const { generate, generating } = useAIGenerate();
+  
+  // Hausaufgaben laden wenn Lektion bearbeitet wird
+  useEffect(() => {
+    if (lesson?.id) {
+      loadHomework(lesson.id);
+    } else {
+      setHomework([]);
+    }
+  }, [lesson?.id]);
+  
+  const loadHomework = async (lessonId: string) => {
+    try {
+      const res = await fetch(`/api/admin/homework?lesson_id=${lessonId}`);
+      if (res.ok) {
+        const hwData = await res.json();
+        setHomework(hwData.map((hw: any) => ({
+          id: hw.id,
+          title: hw.title,
+          description: hw.description,
+          deadline: hw.deadline ? new Date(hw.deadline).toISOString().slice(0, 16) : '',
+          max_points: hw.max_points,
+          content_type: hw.content_type || 'text',
+          vimeo_video_url: hw.vimeo_video_url || '',
+          duration_minutes: hw.duration_minutes,
+          text_content: hw.text_content || '',
+          pdf_url: hw.pdf_url || '',
+          pdf_name: hw.pdf_name || '',
+          is_active: hw.is_active !== false,
+        })));
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden der Hausaufgaben:', err);
+    }
+  };
 
   const generateSlug = (title: string) => {
     return title
@@ -700,8 +734,56 @@ function LessonModal({
         toast.success('✅ Lektion erfolgreich erstellt!');
       }
 
-      // Hausaufgaben speichern (TODO: Backend-Integration)
-      // for (const hw of homework) { ... }
+      // Hausaufgaben speichern
+      for (const hw of homework) {
+        try {
+          if (hw.id && hw.id.startsWith('temp-')) {
+            // Neue Hausaufgabe erstellen
+            const hwPayload = {
+              lesson_id: result.id || result.data?.id,
+              title: hw.title,
+              description: hw.description,
+              deadline: hw.deadline ? new Date(hw.deadline).toISOString() : null,
+              max_points: hw.max_points,
+              content_type: hw.content_type,
+              vimeo_video_url: hw.vimeo_video_url || null,
+              text_content: hw.text_content || null,
+              pdf_url: hw.pdf_url || null,
+              pdf_name: hw.pdf_name || null,
+              is_active: hw.is_active,
+            };
+            
+            await fetch('/api/admin/homework', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(hwPayload),
+            });
+          } else if (hw.id) {
+            // Bestehende Hausaufgabe aktualisieren
+            const hwPayload = {
+              title: hw.title,
+              description: hw.description,
+              deadline: hw.deadline ? new Date(hw.deadline).toISOString() : null,
+              max_points: hw.max_points,
+              content_type: hw.content_type,
+              vimeo_video_url: hw.vimeo_video_url || null,
+              text_content: hw.text_content || null,
+              pdf_url: hw.pdf_url || null,
+              pdf_name: hw.pdf_name || null,
+              is_active: hw.is_active,
+            };
+            
+            await fetch(`/api/admin/homework?id=${hw.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(hwPayload),
+            });
+          }
+        } catch (hwErr) {
+          console.error('Fehler beim Speichern der Hausaufgabe:', hwErr);
+          toast.error(`❌ Fehler beim Speichern der Hausaufgabe "${hw.title}"`);
+        }
+      }
 
       onSave(result.data || result);
     } catch (err) {
