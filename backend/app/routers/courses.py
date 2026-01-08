@@ -23,6 +23,7 @@ from app.models import (
     ContentType,
     TeacherProfile,
 )
+from app.models.course.homework import Homework
 
 router = APIRouter()
 
@@ -91,11 +92,29 @@ class LessonUpdate(BaseModel):
     is_published: Optional[bool] = None
 
 
+class HomeworkResponse(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = None
+    deadline: Optional[datetime] = None
+    max_points: Optional[int] = None
+    content_type: str = "text"
+    vimeo_video_url: Optional[str] = None
+    text_content: Optional[str] = None
+    pdf_url: Optional[str] = None
+    pdf_name: Optional[str] = None
+    is_active: bool = True
+
+    class Config:
+        from_attributes = True
+
+
 class LessonResponse(LessonBase):
     id: UUID
     course_id: UUID
     created_at: datetime
     updated_at: datetime
+    homework: List[HomeworkResponse] = []
 
     class Config:
         from_attributes = True
@@ -211,7 +230,10 @@ async def list_courses(
     query = select(Course).where(
         Course.is_published == True,
         Course.is_active == True
-    ).options(selectinload(Course.teachers), selectinload(Course.lessons))
+    ).options(
+        selectinload(Course.teachers), 
+        selectinload(Course.lessons).selectinload(Lesson.homework)
+    )
     
     # Filter anwenden
     if category:
@@ -284,7 +306,7 @@ async def get_course_by_slug(
         Course.is_active == True
     ).options(
         selectinload(Course.teachers),
-        selectinload(Course.lessons)
+        selectinload(Course.lessons).selectinload(Lesson.homework)
     )
     
     result = await db.execute(query)
@@ -342,7 +364,7 @@ async def admin_list_all_courses(
     """
     query = select(Course).options(
         selectinload(Course.teachers),
-        selectinload(Course.lessons)
+        selectinload(Course.lessons).selectinload(Lesson.homework)
     )
     query = query.order_by(Course.order, Course.created_at.desc())
     
@@ -377,7 +399,7 @@ async def admin_get_course(
     """
     query = select(Course).where(Course.id == course_id).options(
         selectinload(Course.teachers),
-        selectinload(Course.lessons)
+        selectinload(Course.lessons).selectinload(Lesson.homework)
     )
     
     result = await db.execute(query)

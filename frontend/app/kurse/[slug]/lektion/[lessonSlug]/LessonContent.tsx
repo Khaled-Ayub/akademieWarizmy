@@ -144,7 +144,7 @@ function MaterialsSection({ materials }: { materials?: { name: string; url: stri
 }
 
 // =========================================
-// Hausaufgaben-Sektion
+// Hausaufgaben-Sektion mit Frist-Countdown
 // =========================================
 interface HomeworkDisplay {
   id: string;
@@ -159,60 +159,127 @@ interface HomeworkDisplay {
   pdf_name?: string;
 }
 
+function DeadlineCountdown({ deadline }: { deadline: string }) {
+  const now = new Date();
+  const deadlineDate = new Date(deadline);
+  const diff = deadlineDate.getTime() - now.getTime();
+  
+  if (diff <= 0) {
+    return (
+      <span className="flex items-center gap-1.5 text-red-700 bg-red-100 px-3 py-1.5 rounded-full font-medium">
+        <AlertCircle className="w-4 h-4" />
+        Frist abgelaufen!
+      </span>
+    );
+  }
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  
+  let urgencyClass = "text-green-700 bg-green-100";
+  let icon = <Clock className="w-4 h-4" />;
+  
+  if (days <= 1) {
+    urgencyClass = "text-red-700 bg-red-100 animate-pulse";
+    icon = <AlertCircle className="w-4 h-4" />;
+  } else if (days <= 3) {
+    urgencyClass = "text-orange-700 bg-orange-100";
+  } else if (days <= 7) {
+    urgencyClass = "text-amber-700 bg-amber-100";
+  }
+  
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium ${urgencyClass}`}>
+        {icon}
+        {days > 0 ? `Noch ${days} Tag${days > 1 ? 'e' : ''}` : `Noch ${hours} Stunde${hours > 1 ? 'n' : ''}`}
+      </span>
+      <span className="text-xs text-gray-500 flex items-center gap-1">
+        <Calendar className="w-3 h-3" />
+        {deadlineDate.toLocaleDateString('de-DE', { 
+          weekday: 'short', 
+          day: 'numeric', 
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}
+      </span>
+    </div>
+  );
+}
+
 function HomeworkSection({ homework }: { homework?: HomeworkDisplay[] }) {
   if (!homework || homework.length === 0) return null;
   
   return (
     <div className="mt-8">
-      <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-t-xl p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-          <ClipboardList className="w-5 h-5 text-white" />
+      {/* Hervorgehobener Header */}
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 rounded-t-xl p-5 flex items-center gap-4 shadow-lg">
+        <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+          <span className="text-3xl">📝</span>
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">📝 Hausaufgaben</h3>
-          <p className="text-amber-100 text-sm">Aufgaben zu dieser Lektion</p>
+          <h3 className="text-xl font-bold text-white">Hausaufgaben</h3>
+          <p className="text-amber-100 text-sm">{homework.length} Aufgabe{homework.length > 1 ? 'n' : ''} zu bearbeiten</p>
         </div>
       </div>
       
-      <div className="border-2 border-t-0 border-amber-200 rounded-b-xl bg-amber-50/30 divide-y divide-amber-100">
+      <div className="border-2 border-t-0 border-amber-300 rounded-b-xl bg-gradient-to-b from-amber-50 to-white divide-y divide-amber-200">
         {homework.map((hw, index) => (
           <div key={hw.id || index} className="p-6">
+            {/* Titel + Deadline prominent */}
             <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h4 className="text-lg font-bold text-gray-900">{hw.title}</h4>
-                <div className="flex items-center gap-4 mt-2 text-sm">
-                  {hw.deadline && (
-                    <span className="flex items-center gap-1.5 text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
-                      <Calendar className="w-4 h-4" />
-                      Fällig: {new Date(hw.deadline).toLocaleDateString('de-DE')}
-                    </span>
-                  )}
+              <div className="flex-1">
+                <h4 className="text-xl font-bold text-gray-900 mb-2">{hw.title}</h4>
+                <div className="flex flex-wrap items-center gap-3">
                   {hw.max_points && (
-                    <span className="flex items-center gap-1.5 text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                      <AlertCircle className="w-4 h-4" />
-                      {hw.max_points} Punkte
+                    <span className="flex items-center gap-1.5 text-gray-600 bg-gray-100 px-3 py-1 rounded-full text-sm">
+                      ⭐ {hw.max_points} Punkte
                     </span>
                   )}
                 </div>
               </div>
+              
+              {/* Deadline Countdown */}
+              {hw.deadline && (
+                <div className="flex-shrink-0">
+                  <DeadlineCountdown deadline={hw.deadline} />
+                </div>
+              )}
             </div>
             
+            {/* Beschreibung */}
             {hw.description && (
-              <div className="prose prose-gray max-w-none text-gray-600 mb-4 p-4 bg-white rounded-lg border border-amber-100">
+              <div className="prose prose-gray max-w-none text-gray-600 mb-4 p-4 bg-white rounded-lg border border-amber-200">
                 <div dangerouslySetInnerHTML={{ __html: hw.description }} />
               </div>
             )}
             
+            {/* Text-Content */}
+            {hw.text_content && (
+              <div className="prose prose-gray max-w-none text-gray-700 mb-4 p-4 bg-white rounded-lg border border-gray-200">
+                <div dangerouslySetInnerHTML={{ __html: hw.text_content }} />
+              </div>
+            )}
+            
+            {/* Video */}
+            {hw.vimeo_video_url && (
+              <div className="mb-4 rounded-lg overflow-hidden border border-blue-200">
+                <VimeoPlayer videoUrl={hw.vimeo_video_url} title={hw.title} />
+              </div>
+            )}
+            
+            {/* PDF Download */}
             {hw.pdf_url && (
               <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                 <a 
                   href={getMediaUrl(hw.pdf_url)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
                 >
-                  <Download className="w-4 h-4" />
-                  {hw.pdf_name || 'PDF herunterladen'}
+                  <Download className="w-5 h-5" />
+                  {hw.pdf_name || 'Arbeitsblatt herunterladen'}
                 </a>
               </div>
             )}
@@ -333,9 +400,25 @@ export default function LessonContent({
                 {/* Lektion bereits abgeschlossen */}
                 {isCompleted && (
                   <div className="py-4 border-t border-gray-100">
-                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-3 rounded-lg">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span className="font-medium">Lektion abgeschlossen!</span>
+                    <div className="flex items-center justify-between gap-2 bg-green-50 px-4 py-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="font-medium">Lektion abgeschlossen!</span>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await usersApi.updateLessonProgress(String(lesson.id), { completed: false });
+                            setIsCompleted(false);
+                            notifyProgressChange({ lessonId: String(lesson.id), courseId: String(course.id), completed: false });
+                          } catch (err) {
+                            console.error('Fehler beim Zurücksetzen:', err);
+                          }
+                        }}
+                        className="text-sm text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Wiederholen
+                      </button>
                     </div>
                   </div>
                 )}
