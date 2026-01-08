@@ -576,7 +576,14 @@ async def create_lesson(
     
     db.add(lesson)
     await db.commit()
-    await db.refresh(lesson)
+
+    # Lektion mit Hausaufgaben neu laden, damit Pydantic kein Lazy-Load triggert
+    result = await db.execute(
+        select(Lesson)
+        .where(Lesson.id == lesson.id)
+        .options(selectinload(Lesson.homework))
+    )
+    lesson = result.scalar_one()
     
     return LessonResponse.model_validate(lesson)
 
