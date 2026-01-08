@@ -34,15 +34,23 @@ interface Course {
 
 interface ScheduleEntry {
   id: string;
-  day_of_week: number; // 0=Montag, 6=Sonntag
-  start_time: string;  // HH:MM
-  end_time: string;    // HH:MM
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
   session_type: 'online' | 'onsite' | 'hybrid';
   location?: string;
+  location_id?: string;
+  frequency?: number;
   zoom_join_url?: string;
 }
 
-// Wochentage
+interface Location {
+  id: string;
+  name: string;
+  city: string;
+  address?: string;
+}
+
 const WEEKDAYS = [
   { value: 0, label: 'Montag', short: 'Mo' },
   { value: 1, label: 'Dienstag', short: 'Di' },
@@ -59,15 +67,24 @@ const SESSION_TYPES = [
   { value: 'hybrid', label: 'Hybrid', icon: Users },
 ];
 
+const FREQUENCY_OPTIONS = [
+  { value: 1, label: 'Jede Woche' },
+  { value: 2, label: 'Alle 2 Wochen' },
+  { value: 3, label: 'Alle 3 Wochen' },
+  { value: 4, label: 'Alle 4 Wochen' },
+];
+
 // =========================================
 // Schedule Editor Komponente
 // =========================================
 function ScheduleEditor({ 
   schedules, 
-  onChange 
+  onChange,
+  locations = []
 }: { 
-  schedules: ScheduleEntry[]; 
+  schedules: ScheduleEntry[];
   onChange: (schedules: ScheduleEntry[]) => void;
+  locations?: Location[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -190,16 +207,43 @@ function ScheduleEditor({
                   {/* Zusätzliche Felder je nach Typ */}
                   {(schedule.session_type === 'onsite' || schedule.session_type === 'hybrid') && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Ort</label>
-                      <input
-                        type="text"
-                        value={schedule.location || ''}
-                        onChange={(e) => updateSchedule(schedule.id, { location: e.target.value })}
-                        placeholder="z.B. Moschee, Raum 101"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                      />
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Unterrichtsort</label>
+                      {locations.length > 0 ? (
+                        <select
+                          value={schedule.location_id || ''}
+                          onChange={(e) => updateSchedule(schedule.id, { location_id: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">Ort auswählen...</option>
+                          {locations.map((loc: Location) => (
+                            <option key={loc.id} value={loc.id}>{loc.name} - {loc.city}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={schedule.location || ''}
+                          onChange={(e) => updateSchedule(schedule.id, { location: e.target.value })}
+                          placeholder="z.B. Moschee, Raum 101"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                        />
+                      )}
                     </div>
                   )}
+
+                  {/* Frequenz-Auswahl */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Wiederholungsfrequenz</label>
+                    <select
+                      value={schedule.frequency || 1}
+                      onChange={(e) => updateSchedule(schedule.id, { frequency: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      {FREQUENCY_OPTIONS.map((freq: any) => (
+                        <option key={freq.value} value={freq.value}>{freq.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
                   {(schedule.session_type === 'online' || schedule.session_type === 'hybrid') && (
                     <div>
@@ -297,7 +341,9 @@ export default function NeueKlassePage() {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [loadingLocations, setLoadingLocations] = useState(true);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -313,7 +359,7 @@ export default function NeueKlassePage() {
   // Schedules
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
 
-  // Kurse laden
+  // Kurse und Orte laden
   useEffect(() => {
     async function loadCourses() {
       try {
@@ -332,6 +378,26 @@ export default function NeueKlassePage() {
       }
     }
     loadCourses();
+  }, []);
+
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/admin/locations');
+        const data = await res.json();
+        const items =
+          Array.isArray(data?.items) ? data.items :
+          Array.isArray(data?.data) ? data.data :
+          Array.isArray(data) ? data :
+          [];
+        setLocations(items);
+      } catch (err) {
+        console.error('Error loading locations:', err);
+      } finally {
+        setLoadingLocations(false);
+      }
+    }
+    loadLocations();
   }, []);
 
   // Auto-Generate Name wenn Kurs ausgewählt wird
@@ -419,7 +485,8 @@ export default function NeueKlassePage() {
               start_time: schedule.start_time,
               end_time: schedule.end_time,
               session_type: schedule.session_type,
-              location: schedule.location,
+      location_id: schedule.location_id,
+              frequency: schedule.frequency,
               zoom_join_url: schedule.zoom_join_url,
             }),
           });
@@ -516,7 +583,7 @@ export default function NeueKlassePage() {
 
           {/* Stundenplan */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <ScheduleEditor schedules={schedules} onChange={setSchedules} />
+            <ScheduleEditor schedules={schedules} onChange={setSchedules} locations={locations} />
           </div>
         </div>
 

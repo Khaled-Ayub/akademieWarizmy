@@ -301,6 +301,17 @@ class ClassSchedule(Base):
         nullable=True,
         comment="Ort für Vor-Ort-Unterricht"
     )
+    location_id = Column(
+        UUID(as_uuid=True), 
+        ForeignKey("locations.id", ondelete="SET NULL"), 
+        nullable=True,
+        comment="Referenz zur Location (wenn erstellt)"
+    )
+    frequency = Column(
+        Integer, 
+        default=1,
+        comment="Wiederholungsfrequenz in Wochen (1, 2, 3, 4)"
+    )
     
     # =========================================
     # Zoom-Daten (für Online)

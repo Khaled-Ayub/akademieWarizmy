@@ -40,9 +40,18 @@ interface ScheduleEntry {
   end_time: string;
   session_type: 'online' | 'onsite' | 'hybrid';
   location?: string;
+  location_id?: string;
+  frequency?: number;
   zoom_join_url?: string;
   isNew?: boolean;
   isDeleted?: boolean;
+}
+
+interface Location {
+  id: string;
+  name: string;
+  city: string;
+  address?: string;
 }
 
 interface ClassData {
@@ -79,10 +88,12 @@ const SESSION_TYPES = [
 // =========================================
 function ScheduleEditor({ 
   schedules, 
-  onChange 
+  onChange,
+  locations = []
 }: { 
-  schedules: ScheduleEntry[]; 
+  schedules: ScheduleEntry[];
   onChange: (schedules: ScheduleEntry[]) => void;
+  locations?: Location[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -218,16 +229,44 @@ function ScheduleEditor({
                   {/* Zusätzliche Felder je nach Typ */}
                   {(schedule.session_type === 'onsite' || schedule.session_type === 'hybrid') && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Ort</label>
-                      <input
-                        type="text"
-                        value={schedule.location || ''}
-                        onChange={(e) => updateSchedule(schedule.id, { location: e.target.value })}
-                        placeholder="z.B. Moschee, Raum 101"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                      />
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Unterrichtsort</label>
+                      {locations.length > 0 ? (
+                        <select
+                          value={schedule.location_id || ''}
+                          onChange={(e) => updateSchedule(schedule.id, { location_id: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">Ort auswählen...</option>
+                          {locations.map((loc: Location) => (
+                            <option key={loc.id} value={loc.id}>{loc.name} - {loc.city}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={schedule.location || ''}
+                          onChange={(e) => updateSchedule(schedule.id, { location: e.target.value })}
+                          placeholder="z.B. Moschee, Raum 101"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                        />
+                      )}
                     </div>
                   )}
+
+                  {/* Frequenz-Auswahl */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Wiederholungsfrequenz</label>
+                    <select
+                      value={schedule.frequency || 1}
+                      onChange={(e) => updateSchedule(schedule.id, { frequency: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="1">Jede Woche</option>
+                      <option value="2">Alle 2 Wochen</option>
+                      <option value="3">Alle 3 Wochen</option>
+                      <option value="4">Alle 4 Wochen</option>
+                    </select>
+                  </div>
 
                   {(schedule.session_type === 'online' || schedule.session_type === 'hybrid') && (
                     <div>
@@ -320,6 +359,7 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -336,24 +376,48 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [originalScheduleIds, setOriginalScheduleIds] = useState<string[]>([]);
 
-  // Daten laden
+  // Kurse und Orte laden
   useEffect(() => {
-    async function loadData() {
+    async function loadCourses() {
       try {
-        // Kurse und Klasse parallel laden
-        const [coursesRes, classRes] = await Promise.all([
-          fetch('/api/admin/courses'),
-          fetch(`/api/admin/classes/${id}`)
-        ]);
-
-        // Kurse verarbeiten
-        const coursesData = await coursesRes.json();
+        const res = await fetch('/api/admin/courses');
+        const data = await res.json();
         const items =
-          Array.isArray(coursesData?.items) ? coursesData.items :
-          Array.isArray(coursesData?.data) ? coursesData.data :
-          Array.isArray(coursesData) ? coursesData :
+          Array.isArray(data?.items) ? data.items :
+          Array.isArray(data?.data) ? data.data :
+          Array.isArray(data) ? data :
           [];
         setCourses(items);
+      } catch (err) {
+        console.error('Error loading courses:', err);
+      }
+    }
+    loadCourses();
+  }, []);
+
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/admin/locations');
+        const data = await res.json();
+        const items =
+          Array.isArray(data?.items) ? data.items :
+          Array.isArray(data?.data) ? data.data :
+          Array.isArray(data) ? data :
+          [];
+        setLocations(items);
+      } catch (err) {
+        console.error('Error loading locations:', err);
+      }
+    }
+    loadLocations();
+  }, []);
+
+  // Klasse laden
+  useEffect(() => {
+    async function loadClass() {
+      try {
+        const classRes = await fetch(`/api/admin/classes/${id}`);
 
         // Klasse verarbeiten
         if (!classRes.ok) {
@@ -388,8 +452,8 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
         setLoading(false);
       }
     }
-    loadData();
-  }, [id]);
+    loadClass();
+  }, [id, toast, router]);
 
   // Speichern
   const handleSave = async () => {
@@ -452,7 +516,8 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
             start_time: schedule.start_time,
             end_time: schedule.end_time,
             session_type: schedule.session_type,
-            location: schedule.location,
+            location_id: schedule.location_id,
+            frequency: schedule.frequency,
             zoom_join_url: schedule.zoom_join_url,
           }),
         });
@@ -469,7 +534,8 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
             start_time: schedule.start_time,
             end_time: schedule.end_time,
             session_type: schedule.session_type,
-            location: schedule.location,
+            location_id: schedule.location_id,
+            frequency: schedule.frequency,
             zoom_join_url: schedule.zoom_join_url,
           }),
         });
@@ -603,7 +669,7 @@ export default function KlasseBearbeitenPage({ params }: { params: { id: string 
 
           {/* Stundenplan */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <ScheduleEditor schedules={schedules} onChange={setSchedules} />
+            <ScheduleEditor schedules={schedules} onChange={setSchedules} locations={locations} />
           </div>
         </div>
 

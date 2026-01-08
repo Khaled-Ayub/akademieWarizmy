@@ -153,6 +153,9 @@ class ClassScheduleCreate(BaseModel):
     end_time: str    # HH:MM
     session_type: str = "hybrid"
     location: Optional[str] = None
+    location_id: Optional[str] = None
+    frequency: Optional[int] = 1  # 1, 2, 3, 4 Wochen
+    zoom_join_url: Optional[str] = None
 
 
 class SessionCreate(BaseModel):
@@ -496,6 +499,8 @@ async def add_class_schedule(
         end_time=time(int(end_parts[0]), int(end_parts[1])),
         session_type=ClassSessionType(data.session_type),
         location=data.location,
+        frequency=data.frequency or 1,
+        zoom_join_url=data.zoom_join_url,
     )
     db.add(schedule)
     await db.commit()
