@@ -33,6 +33,8 @@ import {
 // Vimeo Player Komponente importieren
 import VimeoPlayer from '@/components/VimeoPlayer';
 
+import LessonNavbar from '@/components/LessonNavbar';
+
 // =========================================
 // Statische Pfade generieren (für SSG)
 // =========================================
@@ -339,44 +341,6 @@ function HomeworkSection({ homework }: { homework?: HomeworkDisplay[] }) {
 }
 
 // =========================================
-// Header
-// =========================================
-function Header({ courseTitle, courseSlug }: { courseTitle: string; courseSlug: string }) {
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <div className="container-custom">
-        <div className="flex items-center justify-between h-14">
-          {/* Logo + Zurück */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-            </Link>
-            <div className="h-6 w-px bg-gray-200" />
-            <Link 
-              href={`/kurse/${courseSlug}`}
-              className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary-500"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">{courseTitle}</span>
-              <span className="sm:hidden">Zurück</span>
-            </Link>
-          </div>
-          
-          {/* Auth */}
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm text-gray-600 hover:text-primary-500">
-              Anmelden
-            </Link>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// =========================================
 // Hauptseite
 // =========================================
 export default async function LessonPage({ 
@@ -400,7 +364,7 @@ export default async function LessonPage({
 
   return (
     <>
-      <Header courseTitle={course.title} courseSlug={course.slug} />
+      <LessonNavbar courseTitle={course.title} courseSlug={course.slug} />
       
       <main className="pt-14 min-h-screen bg-gray-100">
         <div className="container-custom py-6">

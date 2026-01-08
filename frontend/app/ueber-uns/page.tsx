@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Users, Target, Lightbulb, GraduationCap } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 export const metadata = {
   title: 'Über uns | WARIZMY Education',
@@ -12,7 +13,9 @@ export const metadata = {
 
 export default function UeberUnsPage() {
   return (
-    <main className="min-h-screen bg-gray-50">
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-gray-50 pt-16">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary-600 via-primary-500 to-secondary-500 text-white overflow-hidden">
         {/* Pattern Overlay */}
@@ -235,6 +238,7 @@ export default function UeberUnsPage() {
         </div>
       </footer>
     </main>
+    </>
   );
 }
 

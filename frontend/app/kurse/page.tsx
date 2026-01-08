@@ -14,61 +14,13 @@ import {
   getMediaUrl 
 } from '@/lib/content';
 
+import Navbar from '@/components/Navbar';
+
 // Metadata für SEO
 export const metadata = {
   title: 'Kurse | WARIZMY Education',
   description: 'Entdecken Sie unsere Kurse für Arabisch und islamische Bildung.',
 };
-
-// Header Komponente (wiederverwendet)
-function Header() {
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <div className="container-custom">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm">
-              <Image
-                src="/images/Logo/full (1).jpg"
-                alt="WARIZMY Logo"
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-gray-900">
-              WARIZMY
-            </span>
-          </Link>
-          
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/kurse" className="text-primary-500 font-medium">
-              Kurse
-            </Link>
-            <Link href="/ueber-uns" className="text-gray-600 hover:text-primary-500 font-medium">
-              Über uns
-            </Link>
-            <Link href="/faq" className="text-gray-600 hover:text-primary-500 font-medium">
-              FAQ
-            </Link>
-            <Link href="/kontakt" className="text-gray-600 hover:text-primary-500 font-medium">
-              Kontakt
-            </Link>
-          </nav>
-          
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-gray-600 hover:text-primary-500 font-medium hidden sm:block">
-              Anmelden
-            </Link>
-            <Link href="/registrieren" className="btn-primary py-2 px-4 text-sm">
-              Registrieren
-            </Link>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 // Kurs-Karte Komponente
 function CourseCard({ course }: { course: Course }) {
@@ -196,7 +148,7 @@ export default async function KursePage() {
 
   return (
     <>
-      <Header />
+      <Navbar />
       <main className="pt-16">
         {/* Hero */}
         <section className="bg-gradient-to-br from-primary-500/10 via-background-light to-secondary-500/10 py-16">

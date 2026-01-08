@@ -16,6 +16,7 @@ import {
 
 // Client Component für Formular
 import ContactForm from './ContactForm';
+import Navbar from '@/components/Navbar';
 
 // ===========================================
 // METADATA
@@ -29,49 +30,6 @@ export const metadata = {
 // ===========================================
 // HEADER
 // ===========================================
-
-function Header() {
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <div className="container-custom">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-heading text-xl font-bold text-gray-900">
-              WARIZMY
-            </span>
-          </Link>
-          
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/kurse" className="text-gray-600 hover:text-primary-500 font-medium">
-              Kurse
-            </Link>
-            <Link href="/ueber-uns" className="text-gray-600 hover:text-primary-500 font-medium">
-              Über uns
-            </Link>
-            <Link href="/faq" className="text-gray-600 hover:text-primary-500 font-medium">
-              FAQ
-            </Link>
-            <Link href="/kontakt" className="text-primary-500 font-medium">
-              Kontakt
-            </Link>
-          </nav>
-          
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-gray-600 hover:text-primary-500 font-medium hidden sm:block">
-              Anmelden
-            </Link>
-            <Link href="/registrieren" className="btn-primary py-2 px-4 text-sm">
-              Registrieren
-            </Link>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 // ===========================================
 // KONTAKTINFO KARTE
@@ -106,7 +64,7 @@ function ContactInfoCard({
 export default function KontaktPage() {
   return (
     <>
-      <Header />
+      <Navbar />
       
       <main className="pt-16 min-h-screen bg-gray-50">
         {/* Hero */}

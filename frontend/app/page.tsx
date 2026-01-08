@@ -44,6 +44,9 @@ import Newsletter from '@/components/Newsletter';
 // Kurs-Suche Komponente
 import CourseSearch from '@/components/CourseSearch';
 
+// Neue Navbar-Komponente
+import Navbar from '@/components/Navbar';
+
 // Hero-Sektion
 async function HeroSection() {
   const islamicToday = getIslamicDailyInfo();
@@ -379,62 +382,6 @@ function CTASection() {
   );
 }
 
-// Header Komponente
-function Header() {
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-      <div className="container-custom">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm">
-              <Image
-                src="/images/Logo/full (1).jpg"
-                alt="WARIZMY Logo"
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-            <span className="font-heading text-xl font-bold text-gray-900">
-              WARIZMY
-            </span>
-          </Link>
-          
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/kurse" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
-              Kurse
-            </Link>
-            <Link href="/lehrer" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
-              Lehrer
-            </Link>
-            <Link href="/ueber-uns" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
-              Über uns
-            </Link>
-            <Link href="/faq" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
-              FAQ
-            </Link>
-            <Link href="/kontakt" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">
-              Kontakt
-            </Link>
-          </nav>
-          
-          {/* Auth Buttons */}
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-gray-600 hover:text-primary-500 font-medium hidden sm:block">
-              Anmelden
-            </Link>
-            <Link href="/registrieren" className="btn-primary py-2 px-4 text-sm">
-              Registrieren
-            </Link>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 // Footer Komponente
 function Footer() {
   return (
@@ -503,11 +450,9 @@ function Footer() {
 export default async function HomePage() {
   return (
     <>
-      <Header />
-      {/* Ankündigungs-Banner - fixed unter der Navbar */}
-      <AnnouncementBanner />
-      {/* Extra padding für Header (64px) + Banner (ca. 40px) */}
-      <main className="pt-[104px]">
+      <Navbar />
+      {/* Extra padding für Header (64px) */}
+      <main className="pt-16">
         <HeroSection />
         <FeaturesSection />
         {/* Unterrichtsplan-Kalender */}
