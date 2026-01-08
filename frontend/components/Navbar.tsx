@@ -11,12 +11,18 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [bannerClosed, setBannerClosed] = useState(false);
   const { user, isAuthenticated, logout, checkAuth } = useAuthStore();
   const pathname = usePathname();
 
   // Check auth on mount to ensure correct state on public pages
   useEffect(() => {
     checkAuth();
+    // Prüfe ob Banner geschlossen wurde
+    const closed = localStorage.getItem('announcement-banner-closed');
+    if (closed === 'true') {
+      setBannerClosed(true);
+    }
   }, [checkAuth]);
 
   // Handle scroll effect
@@ -26,6 +32,16 @@ export default function Navbar() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Höre auf localStorage-Änderungen (Banner-Schließen)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const closed = localStorage.getItem('announcement-banner-closed');
+      setBannerClosed(closed === 'true');
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const navLinks = [
@@ -40,7 +56,7 @@ export default function Navbar() {
 
   return (
     <header 
-      className={`sticky top-12 left-0 right-0 z-40 transition-all duration-300 ${
+      className={`sticky ${bannerClosed ? 'top-0' : 'top-12'} left-0 right-0 z-40 transition-all duration-300 ${
         scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 py-2' : 'bg-white/80 backdrop-blur-sm py-4'
       }`}
     >

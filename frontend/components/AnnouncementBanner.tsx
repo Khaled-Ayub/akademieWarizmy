@@ -173,7 +173,11 @@ export default function AnnouncementBanner({ initialAnnouncements }: Announcemen
       
       {/* Schließen-Button */}
       <button
-        onClick={() => setIsClosed(true)}
+        onClick={() => {
+          setIsClosed(true);
+          localStorage.setItem('announcement-banner-closed', 'true');
+          window.dispatchEvent(new Event('storage'));
+        }}
         className="absolute right-2 top-1/2 -translate-y-1/2 z-40 p-1 hover:bg-red-700 rounded-full transition-colors bg-red-600"
         aria-label="Ankündigung schließen"
       >
