@@ -18,6 +18,7 @@ from app.models import (
     SubmissionStatus,
     Lesson,
     User,
+    UserRole,
 )
 from app.schemas.homework import (
     HomeworkCreate, HomeworkUpdate, HomeworkResponse,
@@ -38,7 +39,7 @@ router = APIRouter(tags=["homework"])
 async def create_homework(
     homework_data: HomeworkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "teacher"]))
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Neue Hausaufgabe erstellen (Admin)"""
     # Prüfen ob Lektion existiert
@@ -81,7 +82,7 @@ async def get_homework_by_lesson(
 async def get_homework_with_submissions(
     lesson_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "teacher"]))
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Alle Hausaufgaben einer Lektion mit Abgaben (Admin)"""
     homework_list = db.query(Homework).filter(
@@ -138,7 +139,7 @@ async def update_homework(
     homework_id: UUID,
     homework_data: HomeworkUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "teacher"]))
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Hausaufgabe aktualisieren (Admin)"""
     homework = db.query(Homework).filter(Homework.id == homework_id).first()
@@ -159,7 +160,7 @@ async def update_homework(
 async def delete_homework(
     homework_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "teacher"]))
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Hausaufgabe löschen (Admin)"""
     homework = db.query(Homework).filter(Homework.id == homework_id).first()
@@ -304,7 +305,7 @@ async def grade_submission(
     submission_id: UUID,
     grade_data: HomeworkGradeSchema,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "teacher"]))
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Abgabe bewerten (Admin/Lehrer)"""
     submission = db.query(HomeworkSubmission).filter(
@@ -335,7 +336,7 @@ async def upload_homework_material(
     file: UploadFile = File(...),
     homework_id: Optional[UUID] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "teacher"]))
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Material für Hausaufgabe hochladen (Admin)"""
     folder = f"homework-materials/{homework_id}" if homework_id else "homework-materials/temp"
