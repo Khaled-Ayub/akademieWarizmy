@@ -298,7 +298,9 @@ export async function getLessonBySlug(
 ): Promise<{ lesson: Lesson; course: Course; allLessons: Lesson[] } | null> {
   try {
     // Direkt vom Backend laden (enthält bereits Hausaufgaben durch selectinload)
-    const response = await fetch(`${API_URL}/courses/${courseSlug}/lessons/${lessonSlug}`);
+    const response = await fetch(`${API_URL}/courses/${courseSlug}/lessons/${lessonSlug}`, {
+      cache: 'no-store',
+    });
     
     if (!response.ok) {
       // Fallback: Kurs laden und Lektion daraus extrahieren

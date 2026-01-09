@@ -4,36 +4,11 @@
 // Server Component - lädt Daten und gibt an Client weiter
 
 import { notFound } from 'next/navigation';
-import { 
-  getLessonBySlug,
-  getCourses,
-  getLessonsByCourse,
-} from '@/lib/content';
+import { getLessonBySlug } from '@/lib/content';
 
 import LessonContent from './LessonContent';
 
-// =========================================
-// Statische Pfade generieren (für SSG)
-// =========================================
-export async function generateStaticParams() {
-  const courses = await getCourses();
-  const params: { slug: string; lessonSlug: string }[] = [];
-  
-  for (const course of courses) {
-    const lessons = await getLessonsByCourse(course.slug);
-    for (const lesson of lessons) {
-      if (lesson.slug) {
-        params.push({
-          slug: course.slug,
-          lessonSlug: lesson.slug,
-        });
-      }
-    }
-  }
-  
-  return params;
-}
-
+export const dynamic = 'force-dynamic';
 // =========================================
 // Metadata generieren
 // =========================================
@@ -88,3 +63,4 @@ export default async function LessonPage({
     />
   );
 }
+
