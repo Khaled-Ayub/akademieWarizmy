@@ -261,7 +261,8 @@ async def get_my_enrollments(
     Enthält sowohl direkte Einschreibungen als auch Kurse über Klassen.
     """
     from sqlalchemy import func
-    from app.models.class_.class_model import EnrollmentStatus
+    from app.models.class_.class_model import EnrollmentStatus as ClassEnrollmentStatus
+    from app.models.enrollment.enrollment import EnrollmentStatus as DirectEnrollmentStatus
     
     enrollments_list = []
     added_course_ids = set()
@@ -274,7 +275,6 @@ async def get_my_enrollments(
             selectinload(ClassEnrollment.class_).selectinload(Class.courses)
         )
         .where(ClassEnrollment.user_id == current_user.id)
-        .where(ClassEnrollment.status == EnrollmentStatus.ACTIVE)
     )
     class_enrollments = class_result.scalars().all()
     
@@ -313,6 +313,10 @@ async def get_my_enrollments(
             print(f"[Enrollments] Class - Course {course.title}: {completed_lessons}/{total_lessons} - user={current_user.id}")
             
             progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+            is_completed = progress >= 100
+            is_active = ce.status == ClassEnrollmentStatus.ACTIVE
+            if not is_active and not is_completed:
+                continue
             
             # Nächste unvollendete Lektion ermitteln
             next_lesson_slug = None
@@ -361,7 +365,7 @@ async def get_my_enrollments(
                 },
                 "progress": progress,
                 "completed_lessons": completed_lessons,
-                "status": "completed" if progress >= 100 else "active",
+                "status": "completed" if is_completed else "active",
                 "enrolled_at": ce.started_at.isoformat() if ce.started_at else None,
                 "next_lesson_slug": next_lesson_slug,
             })
@@ -371,7 +375,6 @@ async def get_my_enrollments(
         select(Enrollment)
         .options(selectinload(Enrollment.course))
         .where(Enrollment.user_id == current_user.id)
-        .where(Enrollment.status == EnrollmentStatus.ACTIVE)
     )
     direct_enrollments = direct_result.scalars().all()
     
@@ -399,6 +402,10 @@ async def get_my_enrollments(
         print(f"[Enrollments] Direct - Course {e.course.title}: {completed_lessons}/{total_lessons} - user={current_user.id}")
         
         progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        is_completed = progress >= 100
+        is_active = e.status == DirectEnrollmentStatus.ACTIVE
+        if not is_active and not is_completed:
+            continue
         
         # Nächste unvollendete Lektion ermitteln
         next_lesson_slug = None
@@ -447,7 +454,7 @@ async def get_my_enrollments(
             },
             "progress": progress,
             "completed_lessons": completed_lessons,
-            "status": "completed" if progress >= 100 else "active",
+            "status": "completed" if is_completed else "active",
             "enrolled_at": e.started_at.isoformat() if e.started_at else None,
             "next_lesson_slug": next_lesson_slug,
         })
