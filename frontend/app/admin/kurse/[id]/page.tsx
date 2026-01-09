@@ -27,6 +27,7 @@ import {
 
 // Toast für Benachrichtigungen
 import { useToast } from '@/components/Toast';
+import api from '@/lib/api';
 
 // KI-Generierung Hook
 function useAIGenerate() {
@@ -648,13 +649,8 @@ function LessonModal({
   }, [lesson?.id]);
   
   const fetchHomework = async (lessonId: string): Promise<HomeworkData[]> => {
-    const res = await fetch(`/api/admin/homework?lesson_id=${lessonId}`);
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Hausaufgaben konnten nicht geladen werden');
-    }
-
-    const hwData = await res.json();
+    const res = await api.get(`/homework/admin/lesson/${lessonId}`);
+    const hwData = res.data || [];
     return hwData.map((hw: any) => ({
       id: hw.id,
       title: hw.title,
@@ -761,15 +757,7 @@ function LessonModal({
               is_active: hw.is_active,
             };
             
-            const hwRes = await fetch('/api/admin/homework', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(hwPayload),
-            });
-            if (!hwRes.ok) {
-              const errorText = await hwRes.text();
-              throw new Error(errorText || 'Hausaufgabe konnte nicht erstellt werden');
-            }
+            await api.post('/homework/', hwPayload);
           } else if (hw.id) {
             // Bestehende Hausaufgabe aktualisieren
             const hwPayload = {
@@ -784,16 +772,7 @@ function LessonModal({
               pdf_name: hw.pdf_name || null,
               is_active: hw.is_active,
             };
-            
-            const hwRes = await fetch(`/api/admin/homework?id=${hw.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(hwPayload),
-            });
-            if (!hwRes.ok) {
-              const errorText = await hwRes.text();
-              throw new Error(errorText || 'Hausaufgabe konnte nicht aktualisiert werden');
-            }
+            await api.put(`/homework/${hw.id}`, hwPayload);
           }
         } catch (hwErr) {
           console.error('Fehler beim Speichern der Hausaufgabe:', hwErr);
