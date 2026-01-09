@@ -647,26 +647,34 @@ function LessonModal({
     }
   }, [lesson?.id]);
   
+  const fetchHomework = async (lessonId: string): Promise<HomeworkData[]> => {
+    const res = await fetch(`/api/admin/homework?lesson_id=${lessonId}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || 'Hausaufgaben konnten nicht geladen werden');
+    }
+
+    const hwData = await res.json();
+    return hwData.map((hw: any) => ({
+      id: hw.id,
+      title: hw.title,
+      description: hw.description,
+      deadline: hw.deadline ? new Date(hw.deadline).toISOString().slice(0, 16) : '',
+      max_points: hw.max_points,
+      content_type: hw.content_type || 'text',
+      vimeo_video_url: hw.vimeo_video_url || '',
+      duration_minutes: hw.duration_minutes,
+      text_content: hw.text_content || '',
+      pdf_url: hw.pdf_url || '',
+      pdf_name: hw.pdf_name || '',
+      is_active: hw.is_active !== false,
+    }));
+  };
+
   const loadHomework = async (lessonId: string) => {
     try {
-      const res = await fetch(`/api/admin/homework?lesson_id=${lessonId}`);
-      if (res.ok) {
-        const hwData = await res.json();
-        setHomework(hwData.map((hw: any) => ({
-          id: hw.id,
-          title: hw.title,
-          description: hw.description,
-          deadline: hw.deadline ? new Date(hw.deadline).toISOString().slice(0, 16) : '',
-          max_points: hw.max_points,
-          content_type: hw.content_type || 'text',
-          vimeo_video_url: hw.vimeo_video_url || '',
-          duration_minutes: hw.duration_minutes,
-          text_content: hw.text_content || '',
-          pdf_url: hw.pdf_url || '',
-          pdf_name: hw.pdf_name || '',
-          is_active: hw.is_active !== false,
-        })));
-      }
+      const items = await fetchHomework(lessonId);
+      setHomework(items);
     } catch (err) {
       console.error('Fehler beim Laden der Hausaufgaben:', err);
     }
@@ -753,11 +761,15 @@ function LessonModal({
               is_active: hw.is_active,
             };
             
-            await fetch('/api/admin/homework', {
+            const hwRes = await fetch('/api/admin/homework', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(hwPayload),
             });
+            if (!hwRes.ok) {
+              const errorText = await hwRes.text();
+              throw new Error(errorText || 'Hausaufgabe konnte nicht erstellt werden');
+            }
           } else if (hw.id) {
             // Bestehende Hausaufgabe aktualisieren
             const hwPayload = {
@@ -773,11 +785,15 @@ function LessonModal({
               is_active: hw.is_active,
             };
             
-            await fetch(`/api/admin/homework?id=${hw.id}`, {
+            const hwRes = await fetch(`/api/admin/homework?id=${hw.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(hwPayload),
             });
+            if (!hwRes.ok) {
+              const errorText = await hwRes.text();
+              throw new Error(errorText || 'Hausaufgabe konnte nicht aktualisiert werden');
+            }
           }
         } catch (hwErr) {
           console.error('Fehler beim Speichern der Hausaufgabe:', hwErr);
@@ -785,7 +801,18 @@ function LessonModal({
         }
       }
 
-      onSave(result.data || result);
+      let refreshedHomework: HomeworkData[] = [];
+      const lessonId = result.id || result.data?.id;
+      if (lessonId) {
+        try {
+          refreshedHomework = await fetchHomework(lessonId);
+          setHomework(refreshedHomework);
+        } catch (err) {
+          console.error('Fehler beim Aktualisieren der Hausaufgaben:', err);
+        }
+      }
+
+      onSave({ ...(result.data || result), homework: refreshedHomework });
     } catch (err) {
       console.error('Error saving lesson:', err);
       toast.error('❌ Fehler beim Speichern der Lektion');
@@ -1782,4 +1809,3 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-

@@ -46,6 +46,12 @@ class HomeworkBase(BaseModel):
     materials: List[MaterialSchema] = []
     max_points: Optional[int] = None
     is_active: bool = True
+    content_type: str = "text"
+    vimeo_video_url: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    text_content: Optional[str] = None
+    pdf_url: Optional[str] = None
+    pdf_name: Optional[str] = None
 
 
 class HomeworkCreate(HomeworkBase):
@@ -65,6 +71,12 @@ class HomeworkUpdate(BaseModel):
     materials: Optional[List[MaterialSchema]] = None
     max_points: Optional[int] = None
     is_active: Optional[bool] = None
+    content_type: Optional[str] = None
+    vimeo_video_url: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    text_content: Optional[str] = None
+    pdf_url: Optional[str] = None
+    pdf_name: Optional[str] = None
 
 
 class HomeworkResponse(HomeworkBase):
