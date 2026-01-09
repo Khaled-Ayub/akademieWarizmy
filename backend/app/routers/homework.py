@@ -27,7 +27,7 @@ from app.schemas.homework import (
 from app.routers.auth import get_current_user, require_role
 from app.services.storage import upload_file, delete_file
 
-router = APIRouter(prefix="/homework", tags=["homework"])
+router = APIRouter(tags=["homework"])
 
 
 # =========================================
