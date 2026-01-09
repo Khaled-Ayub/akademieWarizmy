@@ -132,31 +132,32 @@ function CourseCard({ enrollment }: { enrollment: Enrollment }) {
         </div>
         
         {/* Action Button */}
-        <Link 
-          href={isCompleted 
-            ? `/kurse/${course.slug}` 
-            : next_lesson_slug 
-              ? `/kurse/${course.slug}/lektion/${next_lesson_slug}`
-              : `/kurse/${course.slug}`
-          }
-          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors ${
-            isCompleted
-              ? 'bg-green-50 text-green-700 hover:bg-green-100'
-              : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
-          }`}
-        >
-          {isCompleted ? (
-            <>
+        {isCompleted ? (
+          <div className="flex flex-col gap-2">
+            <Link
+              href={`/kurse/${course.slug}`}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors bg-primary-50 text-primary-700 hover:bg-primary-100"
+            >
+              <BookOpen className="w-4 h-4" />
+              Kurs ansehen
+            </Link>
+            <Link
+              href="/dashboard/zertifikate"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors bg-green-50 text-green-700 hover:bg-green-100"
+            >
               <Award className="w-4 h-4" />
               Zertifikat ansehen
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" />
-              Weiter lernen
-            </>
-          )}
-        </Link>
+            </Link>
+          </div>
+        ) : (
+          <Link
+            href={next_lesson_slug ? `/kurse/${course.slug}/lektion/${next_lesson_slug}` : `/kurse/${course.slug}`}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors bg-primary-50 text-primary-700 hover:bg-primary-100"
+          >
+            <Play className="w-4 h-4" />
+            Weiter lernen
+          </Link>
+        )}
       </div>
     </div>
   );
