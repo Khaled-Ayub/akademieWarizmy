@@ -261,8 +261,6 @@ async def get_my_enrollments(
     Enthält sowohl direkte Einschreibungen als auch Kurse über Klassen.
     """
     from sqlalchemy import func
-    from app.models.class_.class_model import EnrollmentStatus as ClassEnrollmentStatus
-    from app.models.enrollment.enrollment import EnrollmentStatus as DirectEnrollmentStatus
     
     enrollments_list = []
     added_course_ids = set()
@@ -314,9 +312,6 @@ async def get_my_enrollments(
             
             progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
             is_completed = progress >= 100
-            is_active = ce.status == ClassEnrollmentStatus.ACTIVE
-            if not is_active and not is_completed:
-                continue
             
             # Nächste unvollendete Lektion ermitteln
             next_lesson_slug = None
@@ -403,9 +398,6 @@ async def get_my_enrollments(
         
         progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
         is_completed = progress >= 100
-        is_active = e.status == DirectEnrollmentStatus.ACTIVE
-        if not is_active and not is_completed:
-            continue
         
         # Nächste unvollendete Lektion ermitteln
         next_lesson_slug = None
