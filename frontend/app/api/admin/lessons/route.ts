@@ -23,6 +23,46 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
 }
 
+// GET - Lektionen eines Kurses abrufen (Admin)
+export async function GET(request: NextRequest) {
+  try {
+    const courseId = request.nextUrl.searchParams.get('course_id');
+    if (!courseId) {
+      return NextResponse.json({ error: 'course_id ist erforderlich' }, { status: 400 });
+    }
+
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${API_URL}/courses/admin/${courseId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Backend Error:', errorText);
+      try {
+        const error = JSON.parse(errorText);
+        return NextResponse.json(error, { status: res.status });
+      } catch {
+        return NextResponse.json({ error: errorText }, { status: res.status });
+      }
+    }
+
+    const course = await res.json();
+    const lessons = course?.lessons || course?.data?.lessons || [];
+    return NextResponse.json(lessons);
+  } catch (error) {
+    console.error('Error fetching lessons:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch lessons' },
+      { status: 500 }
+    );
+  }
+}
+
 // POST - Neue Lektion erstellen
 export async function POST(request: NextRequest) {
   try {

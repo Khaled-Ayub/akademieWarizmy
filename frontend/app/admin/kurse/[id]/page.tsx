@@ -1315,10 +1315,33 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
           });
           // FastAPI gibt lessons direkt als Array zurück
           // Filtere ungültige Einträge heraus und stelle sicher, dass alle Lessons gültig sind
-          const validLessons = (courseData.lessons || []).filter(
-            (lesson: any) => lesson && lesson.id
+          const normalizeLessons = (items: any[]) => {
+            return items
+              .filter((lesson: any) => lesson)
+              .map((lesson: any) => ({
+                ...lesson,
+                id: lesson.id || lesson.lesson_id,
+              }))
+              .filter((lesson: any) => lesson.id);
+          };
+          const primaryLessons = normalizeLessons(
+            Array.isArray(courseData.lessons) ? courseData.lessons : []
           );
-          setLessons(validLessons);
+          let resolvedLessons = primaryLessons;
+          if (!resolvedLessons.length) {
+            try {
+              const lessonsRes = await fetch(`/api/admin/lessons?course_id=${params.id}`, { cache: 'no-store' });
+              const lessonsData = await lessonsRes.json();
+              resolvedLessons = normalizeLessons(
+                Array.isArray(lessonsData)
+                  ? lessonsData
+                  : lessonsData?.lessons || lessonsData?.data?.lessons || []
+              );
+            } catch (err) {
+              console.error('Error loading lessons:', err);
+            }
+          }
+          setLessons(resolvedLessons);
           
           // Thumbnail laden falls vorhanden
           if (courseData.thumbnail_url) {

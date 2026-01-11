@@ -4,8 +4,8 @@
 # API Endpunkte für Hausaufgaben
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
@@ -38,12 +38,13 @@ router = APIRouter(tags=["homework"])
 @router.post("/", response_model=HomeworkResponse, status_code=status.HTTP_201_CREATED)
 async def create_homework(
     homework_data: HomeworkCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Neue Hausaufgabe erstellen (Admin)"""
     # Prüfen ob Lektion existiert
-    lesson = db.query(Lesson).filter(Lesson.id == homework_data.lesson_id).first()
+    result = await db.execute(select(Lesson).where(Lesson.id == homework_data.lesson_id))
+    lesson = result.scalar_one_or_none()
     if not lesson:
         raise HTTPException(status_code=404, detail="Lektion nicht gefunden")
     
@@ -51,8 +52,8 @@ async def create_homework(
         **homework_data.model_dump()
     )
     db.add(homework)
-    db.commit()
-    db.refresh(homework)
+    await db.commit()
+    await db.refresh(homework)
     
     return homework
 
@@ -60,20 +61,26 @@ async def create_homework(
 @router.get("/lesson/{lesson_id}", response_model=List[HomeworkResponse])
 async def get_homework_by_lesson(
     lesson_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Alle Hausaufgaben einer Lektion abrufen"""
-    homework_list = db.query(Homework).filter(
-        Homework.lesson_id == lesson_id,
-        Homework.is_active == True
-    ).all()
+    result = await db.execute(
+        select(Homework).where(
+            Homework.lesson_id == lesson_id,
+            Homework.is_active == True
+        )
+    )
+    homework_list = result.scalars().all()
     
     # Submission count hinzufügen
     for hw in homework_list:
-        hw.submission_count = db.query(HomeworkSubmission).filter(
-            HomeworkSubmission.homework_id == hw.id
-        ).count()
+        count_result = await db.execute(
+            select(func.count()).select_from(HomeworkSubmission).where(
+                HomeworkSubmission.homework_id == hw.id
+            )
+        )
+        hw.submission_count = count_result.scalar() or 0
     
     return homework_list
 
@@ -81,24 +88,31 @@ async def get_homework_by_lesson(
 @router.get("/admin/lesson/{lesson_id}", response_model=List[HomeworkWithSubmissions])
 async def get_homework_with_submissions(
     lesson_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Alle Hausaufgaben einer Lektion mit Abgaben (Admin)"""
-    homework_list = db.query(Homework).filter(
-        Homework.lesson_id == lesson_id
-    ).all()
+    result = await db.execute(
+        select(Homework).where(Homework.lesson_id == lesson_id)
+    )
+    homework_list = result.scalars().all()
     
     result = []
     for hw in homework_list:
         # Submissions mit Student-Info
-        submissions = db.query(HomeworkSubmission).filter(
-            HomeworkSubmission.homework_id == hw.id
-        ).all()
+        submissions_result = await db.execute(
+            select(HomeworkSubmission).where(
+                HomeworkSubmission.homework_id == hw.id
+            )
+        )
+        submissions = submissions_result.scalars().all()
         
         submission_responses = []
         for sub in submissions:
-            student = db.query(User).filter(User.id == sub.student_id).first()
+            student_result = await db.execute(
+                select(User).where(User.id == sub.student_id)
+            )
+            student = student_result.scalar_one_or_none()
             sub_dict = {
                 **sub.__dict__,
                 "student_name": f"{student.first_name} {student.last_name}" if student else None,
@@ -119,17 +133,21 @@ async def get_homework_with_submissions(
 @router.get("/{homework_id}", response_model=HomeworkResponse)
 async def get_homework(
     homework_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Einzelne Hausaufgabe abrufen"""
-    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    result = await db.execute(select(Homework).where(Homework.id == homework_id))
+    homework = result.scalar_one_or_none()
     if not homework:
         raise HTTPException(status_code=404, detail="Hausaufgabe nicht gefunden")
     
-    homework.submission_count = db.query(HomeworkSubmission).filter(
-        HomeworkSubmission.homework_id == homework.id
-    ).count()
+    count_result = await db.execute(
+        select(func.count()).select_from(HomeworkSubmission).where(
+            HomeworkSubmission.homework_id == homework.id
+        )
+    )
+    homework.submission_count = count_result.scalar() or 0
     
     return homework
 
@@ -138,11 +156,12 @@ async def get_homework(
 async def update_homework(
     homework_id: UUID,
     homework_data: HomeworkUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Hausaufgabe aktualisieren (Admin)"""
-    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    result = await db.execute(select(Homework).where(Homework.id == homework_id))
+    homework = result.scalar_one_or_none()
     if not homework:
         raise HTTPException(status_code=404, detail="Hausaufgabe nicht gefunden")
     
@@ -150,8 +169,8 @@ async def update_homework(
     for key, value in update_data.items():
         setattr(homework, key, value)
     
-    db.commit()
-    db.refresh(homework)
+    await db.commit()
+    await db.refresh(homework)
     
     return homework
 
@@ -159,16 +178,17 @@ async def update_homework(
 @router.delete("/{homework_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_homework(
     homework_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Hausaufgabe löschen (Admin)"""
-    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    result = await db.execute(select(Homework).where(Homework.id == homework_id))
+    homework = result.scalar_one_or_none()
     if not homework:
         raise HTTPException(status_code=404, detail="Hausaufgabe nicht gefunden")
     
-    db.delete(homework)
-    db.commit()
+    await db.delete(homework)
+    await db.commit()
 
 
 # =========================================
@@ -180,11 +200,12 @@ async def submit_homework(
     homework_id: UUID,
     text_content: Optional[str] = Form(None),
     files: List[UploadFile] = File(default=[]),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Hausaufgabe abgeben (Student)"""
-    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    result = await db.execute(select(Homework).where(Homework.id == homework_id))
+    homework = result.scalar_one_or_none()
     if not homework:
         raise HTTPException(status_code=404, detail="Hausaufgabe nicht gefunden")
     
@@ -192,10 +213,13 @@ async def submit_homework(
         raise HTTPException(status_code=400, detail="Hausaufgabe ist nicht mehr aktiv")
     
     # Prüfen ob schon eine Abgabe existiert
-    existing = db.query(HomeworkSubmission).filter(
-        HomeworkSubmission.homework_id == homework_id,
-        HomeworkSubmission.student_id == current_user.id
-    ).first()
+    existing_result = await db.execute(
+        select(HomeworkSubmission).where(
+            HomeworkSubmission.homework_id == homework_id,
+            HomeworkSubmission.student_id == current_user.id
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
     
     if existing and existing.status == SubmissionStatus.GRADED:
         raise HTTPException(status_code=400, detail="Diese Hausaufgabe wurde bereits bewertet")
@@ -245,8 +269,8 @@ async def submit_homework(
         existing.submitted_at = datetime.utcnow()
         existing.is_late = is_late
         existing.status = SubmissionStatus.LATE if is_late else SubmissionStatus.SUBMITTED
-        db.commit()
-        db.refresh(existing)
+        await db.commit()
+        await db.refresh(existing)
         return existing
     else:
         # Neue Abgabe erstellen
@@ -260,20 +284,23 @@ async def submit_homework(
             status=SubmissionStatus.LATE if is_late else SubmissionStatus.SUBMITTED
         )
         db.add(submission)
-        db.commit()
-        db.refresh(submission)
+        await db.commit()
+        await db.refresh(submission)
         return submission
 
 
 @router.get("/my-submissions", response_model=List[HomeworkSubmissionResponse])
 async def get_my_submissions(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Alle eigenen Abgaben abrufen (Student)"""
-    submissions = db.query(HomeworkSubmission).filter(
-        HomeworkSubmission.student_id == current_user.id
-    ).order_by(HomeworkSubmission.created_at.desc()).all()
+    result = await db.execute(
+        select(HomeworkSubmission)
+        .where(HomeworkSubmission.student_id == current_user.id)
+        .order_by(HomeworkSubmission.created_at.desc())
+    )
+    submissions = result.scalars().all()
     
     return submissions
 
@@ -281,14 +308,17 @@ async def get_my_submissions(
 @router.get("/my-submission/{homework_id}", response_model=HomeworkSubmissionResponse)
 async def get_my_submission(
     homework_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Eigene Abgabe für eine Hausaufgabe abrufen"""
-    submission = db.query(HomeworkSubmission).filter(
-        HomeworkSubmission.homework_id == homework_id,
-        HomeworkSubmission.student_id == current_user.id
-    ).first()
+    result = await db.execute(
+        select(HomeworkSubmission).where(
+            HomeworkSubmission.homework_id == homework_id,
+            HomeworkSubmission.student_id == current_user.id
+        )
+    )
+    submission = result.scalar_one_or_none()
     
     if not submission:
         raise HTTPException(status_code=404, detail="Keine Abgabe gefunden")
@@ -304,13 +334,14 @@ async def get_my_submission(
 async def grade_submission(
     submission_id: UUID,
     grade_data: HomeworkGradeSchema,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Abgabe bewerten (Admin/Lehrer)"""
-    submission = db.query(HomeworkSubmission).filter(
-        HomeworkSubmission.id == submission_id
-    ).first()
+    result = await db.execute(
+        select(HomeworkSubmission).where(HomeworkSubmission.id == submission_id)
+    )
+    submission = result.scalar_one_or_none()
     
     if not submission:
         raise HTTPException(status_code=404, detail="Abgabe nicht gefunden")
@@ -321,8 +352,8 @@ async def grade_submission(
     submission.graded_at = datetime.utcnow()
     submission.graded_by = current_user.id
     
-    db.commit()
-    db.refresh(submission)
+    await db.commit()
+    await db.refresh(submission)
     
     return submission
 
@@ -335,7 +366,7 @@ async def grade_submission(
 async def upload_homework_material(
     file: UploadFile = File(...),
     homework_id: Optional[UUID] = Form(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.TEACHER))
 ):
     """Material für Hausaufgabe hochladen (Admin)"""
