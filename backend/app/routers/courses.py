@@ -23,7 +23,6 @@ from app.models import (
     ContentType,
     TeacherProfile,
 )
-from app.models.course.homework import Homework
 
 router = APIRouter()
 
@@ -92,29 +91,11 @@ class LessonUpdate(BaseModel):
     is_published: Optional[bool] = None
 
 
-class HomeworkResponse(BaseModel):
-    id: UUID
-    title: str
-    description: Optional[str] = None
-    deadline: Optional[datetime] = None
-    max_points: Optional[int] = None
-    content_type: str = "text"
-    vimeo_video_url: Optional[str] = None
-    text_content: Optional[str] = None
-    pdf_url: Optional[str] = None
-    pdf_name: Optional[str] = None
-    is_active: bool = True
-
-    class Config:
-        from_attributes = True
-
-
 class LessonResponse(LessonBase):
     id: UUID
     course_id: UUID
     created_at: datetime
     updated_at: datetime
-    homework: List[HomeworkResponse] = []
 
     class Config:
         from_attributes = True
@@ -232,7 +213,7 @@ async def list_courses(
         Course.is_active == True
     ).options(
         selectinload(Course.teachers), 
-        selectinload(Course.lessons).selectinload(Lesson.homework)
+        selectinload(Course.lessons)
     )
     
     # Filter anwenden
@@ -306,7 +287,7 @@ async def get_course_by_slug(
         Course.is_active == True
     ).options(
         selectinload(Course.teachers),
-        selectinload(Course.lessons).selectinload(Lesson.homework)
+        selectinload(Course.lessons)
     )
     
     result = await db.execute(query)
@@ -338,8 +319,6 @@ async def get_lesson(
         Lesson.course_id == course.id,
         Lesson.slug == lesson_slug,
         Lesson.is_published == True
-    ).options(
-        selectinload(Lesson.homework)
     )
     lesson_result = await db.execute(lesson_query)
     lesson = lesson_result.scalar_one_or_none()
@@ -366,7 +345,7 @@ async def admin_list_all_courses(
     """
     query = select(Course).options(
         selectinload(Course.teachers),
-        selectinload(Course.lessons).selectinload(Lesson.homework)
+        selectinload(Course.lessons)
     )
     query = query.order_by(Course.order, Course.created_at.desc())
     
@@ -401,7 +380,7 @@ async def admin_get_course(
     """
     query = select(Course).where(Course.id == course_id).options(
         selectinload(Course.teachers),
-        selectinload(Course.lessons).selectinload(Lesson.homework)
+        selectinload(Course.lessons)
     )
     
     result = await db.execute(query)
@@ -577,11 +556,11 @@ async def create_lesson(
     db.add(lesson)
     await db.commit()
 
-    # Lektion mit Hausaufgaben neu laden, damit Pydantic kein Lazy-Load triggert
+    # Lektion neu laden
     result = await db.execute(
         select(Lesson)
         .where(Lesson.id == lesson.id)
-        .options(selectinload(Lesson.homework))
+        
     )
     lesson = result.scalar_one()
     
@@ -611,7 +590,7 @@ async def update_lesson(
     result = await db.execute(
         select(Lesson)
         .where(Lesson.id == lesson_id)
-        .options(selectinload(Lesson.homework))
+        
     )
     lesson = result.scalar_one()
     

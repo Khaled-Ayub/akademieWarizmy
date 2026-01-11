@@ -210,13 +210,6 @@ class Lesson(Base):
         cascade="all, delete-orphan"
     )
     
-    # Hausaufgaben
-    homework = relationship(
-        "Homework",
-        back_populates="lesson",
-        cascade="all, delete-orphan"
-    )
-    
     def __repr__(self) -> str:
         return f"<Lesson {self.title} (Course: {self.course_id})>"
 

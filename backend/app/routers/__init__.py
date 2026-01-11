@@ -29,7 +29,6 @@ from app.routers import (
     courses,
     content,
     upload,
-    homework,
     locations,
 )
 
@@ -46,6 +45,5 @@ __all__ = [
     "courses",
     "content",
     "upload",
-    "homework",
     "locations",
 ]

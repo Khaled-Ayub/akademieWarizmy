@@ -1,7 +1,7 @@
 # ===========================================
 # WARIZMY EDUCATION - Course Models Package
 # ===========================================
-# Kurs-bezogene Modelle: Course, Lesson, Homework
+# Kurs-bezogene Modelle: Course, Lesson
 
 from app.models.course.course import (
     Course,
@@ -16,12 +16,6 @@ from app.models.course.lesson import (
     ContentType,
     QuestionType,
 )
-from app.models.course.homework import (
-    Homework,
-    HomeworkSubmission,
-    SubmissionStatus,
-)
-
 __all__ = [
     # Course
     "Course",
@@ -34,9 +28,5 @@ __all__ = [
     "Lesson",
     "ContentType",
     "QuestionType",
-    # Homework
-    "Homework",
-    "HomeworkSubmission",
-    "SubmissionStatus",
 ]
 

@@ -8,7 +8,6 @@
 # ├── course/           → Kurs-bezogene Modelle
 # │   ├── course.py     → Course, CourseType, CourseCategory, etc.
 # │   ├── lesson.py     → Lesson, ContentType, QuestionType
-# │   └── homework.py   → Homework, HomeworkSubmission
 # ├── class_/           → Klassen-Modelle  
 # │   └── class_model.py → Class, ClassTeacher, ClassSchedule, ClassEnrollment
 # ├── enrollment/       → Einschreibungs-Modelle
@@ -45,9 +44,6 @@ from app.models.course import (
     Lesson,
     ContentType,
     QuestionType,
-    Homework,
-    HomeworkSubmission,
-    SubmissionStatus,
 )
 
 # Klassen-Modelle
@@ -128,7 +124,7 @@ __all__ = [
     "UserRole",
     
     # =========================================
-    # Course (Kurse, Lektionen, Hausaufgaben)
+    # Course (Kurse, Lektionen)
     # =========================================
     "Course",
     "CourseType",
@@ -139,9 +135,6 @@ __all__ = [
     "Lesson",
     "ContentType",
     "QuestionType",
-    "Homework",
-    "HomeworkSubmission",
-    "SubmissionStatus",
     
     # =========================================
     # Class (Klassen)

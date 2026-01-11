@@ -15,13 +15,7 @@ import {
   Download,
   CheckCircle,
   CheckCircle2,
-  Clock,
   List,
-  ClipboardList,
-  Calendar,
-  Video,
-  File,
-  AlertCircle,
 } from 'lucide-react';
 import { getMediaUrl, Lesson } from '@/lib/content';
 import { usersApi } from '@/lib/api';
@@ -56,8 +50,7 @@ function LessonsSidebar({
         {lessons.map((lesson, index) => {
           const isActive = lesson.slug === currentSlug;
           const lessonUrl = `/kurse/${courseSlug}/lektion/${lesson.slug}`;
-          const hasHomework = (lesson as any).has_homework || ((lesson as any).homework && (lesson as any).homework.length > 0);
-          
+
           return (
             <Link
               key={lesson.id}
@@ -65,9 +58,7 @@ function LessonsSidebar({
               className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${
                 isActive 
                   ? 'bg-primary-50 border-l-4 border-l-primary-500' 
-                  : hasHomework
-                    ? 'bg-amber-50/50 hover:bg-amber-50 border-l-4 border-l-amber-300'
-                    : 'hover:bg-gray-50'
+                  : 'hover:bg-gray-50'
               }`}
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium ${
@@ -83,18 +74,6 @@ function LessonsSidebar({
                   <p className={`text-sm truncate ${isActive ? 'text-primary-700 font-medium' : 'text-gray-700'}`}>
                     {lesson.title}
                   </p>
-                  {hasHomework && (
-                    <span className="flex-shrink-0 text-amber-500" title="Hat Hausaufgaben">
-                      📝
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {hasHomework && (
-                    <p className="text-xs text-amber-500 flex items-center gap-1">
-                      📝 Hausaufgabe
-                    </p>
-                  )}
                 </div>
               </div>
               
@@ -137,153 +116,6 @@ function MaterialsSection({ materials }: { materials?: { name: string; url: stri
               {file.name || 'Download'}
             </span>
           </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// =========================================
-// Hausaufgaben-Sektion mit Frist-Countdown
-// =========================================
-interface HomeworkDisplay {
-  id: string;
-  title: string;
-  description?: string;
-  deadline?: string;
-  max_points?: number;
-  content_type?: string;
-  vimeo_video_url?: string;
-  text_content?: string;
-  pdf_url?: string;
-  pdf_name?: string;
-}
-
-function DeadlineCountdown({ deadline }: { deadline: string }) {
-  const now = new Date();
-  const deadlineDate = new Date(deadline);
-  const diff = deadlineDate.getTime() - now.getTime();
-  
-  if (diff <= 0) {
-    return (
-      <span className="flex items-center gap-1.5 text-red-700 bg-red-100 px-3 py-1.5 rounded-full font-medium">
-        <AlertCircle className="w-4 h-4" />
-        Frist abgelaufen!
-      </span>
-    );
-  }
-  
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
-  let urgencyClass = "text-green-700 bg-green-100";
-  let icon = <Clock className="w-4 h-4" />;
-  
-  if (days <= 1) {
-    urgencyClass = "text-red-700 bg-red-100 animate-pulse";
-    icon = <AlertCircle className="w-4 h-4" />;
-  } else if (days <= 3) {
-    urgencyClass = "text-orange-700 bg-orange-100";
-  } else if (days <= 7) {
-    urgencyClass = "text-amber-700 bg-amber-100";
-  }
-  
-  return (
-    <div className="flex flex-col gap-1">
-      <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium ${urgencyClass}`}>
-        {icon}
-        {days > 0 ? `Noch ${days} Tag${days > 1 ? 'e' : ''}` : `Noch ${hours} Stunde${hours > 1 ? 'n' : ''}`}
-      </span>
-      <span className="text-xs text-gray-500 flex items-center gap-1">
-        <Calendar className="w-3 h-3" />
-        {deadlineDate.toLocaleDateString('de-DE', { 
-          weekday: 'short', 
-          day: 'numeric', 
-          month: 'short',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
-      </span>
-    </div>
-  );
-}
-
-function HomeworkSection({ homework }: { homework?: HomeworkDisplay[] }) {
-  if (!homework || homework.length === 0) return null;
-  
-  return (
-    <div className="mt-8">
-      {/* Hervorgehobener Header */}
-      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 rounded-t-xl p-5 flex items-center gap-4 shadow-lg">
-        <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-          <span className="text-3xl">📝</span>
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-white">Hausaufgaben</h3>
-          <p className="text-amber-100 text-sm">{homework.length} Aufgabe{homework.length > 1 ? 'n' : ''} zu bearbeiten</p>
-        </div>
-      </div>
-      
-      <div className="border-2 border-t-0 border-amber-300 rounded-b-xl bg-gradient-to-b from-amber-50 to-white divide-y divide-amber-200">
-        {homework.map((hw, index) => (
-          <div key={hw.id || index} className="p-6">
-            {/* Titel + Deadline prominent */}
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex-1">
-                <h4 className="text-xl font-bold text-gray-900 mb-2">{hw.title}</h4>
-                <div className="flex flex-wrap items-center gap-3">
-                  {hw.max_points && (
-                    <span className="flex items-center gap-1.5 text-gray-600 bg-gray-100 px-3 py-1 rounded-full text-sm">
-                      ⭐ {hw.max_points} Punkte
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              {/* Deadline Countdown */}
-              {hw.deadline && (
-                <div className="flex-shrink-0">
-                  <DeadlineCountdown deadline={hw.deadline} />
-                </div>
-              )}
-            </div>
-            
-            {/* Beschreibung */}
-            {hw.description && (
-              <div className="prose prose-gray max-w-none text-gray-600 mb-4 p-4 bg-white rounded-lg border border-amber-200">
-                <div dangerouslySetInnerHTML={{ __html: hw.description }} />
-              </div>
-            )}
-            
-            {/* Text-Content */}
-            {hw.text_content && (
-              <div className="prose prose-gray max-w-none text-gray-700 mb-4 p-4 bg-white rounded-lg border border-gray-200">
-                <div dangerouslySetInnerHTML={{ __html: hw.text_content }} />
-              </div>
-            )}
-            
-            {/* Video */}
-            {hw.vimeo_video_url && (
-              <div className="mb-4 rounded-lg overflow-hidden border border-blue-200">
-                <VimeoPlayer videoUrl={hw.vimeo_video_url} title={hw.title} />
-              </div>
-            )}
-            
-            {/* PDF Download */}
-            {hw.pdf_url && (
-              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                <a 
-                  href={getMediaUrl(hw.pdf_url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
-                >
-                  <Download className="w-5 h-5" />
-                  {hw.pdf_name || 'Arbeitsblatt herunterladen'}
-                </a>
-              </div>
-            )}
-          </div>
         ))}
       </div>
     </div>
@@ -404,16 +236,39 @@ export default function LessonContent({
                 )}
 
                 {lesson.pdf_url && (
-                  <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
-                    <a
-                      href={getMediaUrl(lesson.pdf_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
-                    >
-                      <Download className="w-5 h-5" />
-                      {lesson.pdf_name || 'PDF herunterladen'}
-                    </a>
+                  <div className="mb-6 space-y-3">
+                    <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+                      <object
+                        data={getMediaUrl(lesson.pdf_url)}
+                        type="application/pdf"
+                        className="w-full h-[70vh]"
+                      >
+                        <iframe
+                          src={getMediaUrl(lesson.pdf_url)}
+                          title={lesson.pdf_name || 'PDF'}
+                          className="w-full h-[70vh]"
+                          loading="lazy"
+                        />
+                      </object>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <a
+                        href={getMediaUrl(lesson.pdf_url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
+                      >
+                        PDF in neuem Tab
+                      </a>
+                      <a
+                        href={getMediaUrl(lesson.pdf_url)}
+                        download
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                      >
+                        <Download className="w-5 h-5" />
+                        {lesson.pdf_name || 'PDF herunterladen'}
+                      </a>
+                    </div>
                   </div>
                 )}
 
@@ -487,7 +342,6 @@ export default function LessonContent({
               </div>
               
               <MaterialsSection materials={lesson.materials} />
-              <HomeworkSection homework={(lesson as any).homework} />
             </div>
             
             {/* Sidebar */}

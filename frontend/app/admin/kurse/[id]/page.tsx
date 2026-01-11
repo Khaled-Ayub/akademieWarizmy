@@ -27,7 +27,6 @@ import {
 
 // Toast für Benachrichtigungen
 import { useToast } from '@/components/Toast';
-import api from '@/lib/api';
 
 // KI-Generierung Hook
 function useAIGenerate() {
@@ -81,9 +80,6 @@ interface Lesson {
   is_free_preview: boolean;
   isNew?: boolean;
   isEditing?: boolean;
-  // Hausaufgaben
-  homework?: HomeworkData[];
-  has_homework?: boolean;
 }
 
 interface Course {
@@ -108,20 +104,13 @@ interface Course {
 // =========================================
 // Content-Typ Icons
 // =========================================
-import { Video, FileText, File, Layers, Upload, Calendar, BookOpen } from 'lucide-react';
+import { Video, FileText, File, Layers, Upload } from 'lucide-react';
 
 // Tiptap Editor
 import TiptapEditor from '@/components/TiptapEditor';
 
 // Vimeo Player für Vorschau
 import VimeoPlayer from '@/components/VimeoPlayer';
-
-const CONTENT_TYPES = [
-  { value: 'video', label: 'Video', icon: Video, description: 'Video-Lektion (Vimeo)' },
-  { value: 'text', label: 'Text', icon: FileText, description: 'Formatierter Text-Inhalt' },
-  { value: 'pdf', label: 'PDF', icon: File, description: 'PDF-Dokument zum Download' },
-  { value: 'mixed', label: 'Gemischt', icon: Layers, description: 'Video + Text + PDF kombiniert' },
-];
 
 // RichTextEditor wurde durch TiptapEditor ersetzt (siehe Import oben)
 
@@ -213,391 +202,6 @@ function PDFUpload({
 }
 
 // =========================================
-// Hausaufgaben-Bereich
-// =========================================
-interface HomeworkData {
-  id?: string;
-  title: string;
-  description: string;
-  deadline?: string;
-  max_points?: number;
-  is_active: boolean;
-  // Content-Typ (wie bei Lektionen)
-  content_type?: 'video' | 'text' | 'pdf' | 'mixed';
-  // Video
-  vimeo_video_url?: string;
-  duration_minutes?: number;
-  // Text
-  text_content?: string;
-  // PDF
-  pdf_url?: string;
-  pdf_name?: string;
-}
-
-// Hausaufgaben Content-Typen
-const HW_CONTENT_TYPES = [
-  { value: 'text', label: 'Text', icon: FileText, description: 'Anweisungen & Text' },
-  { value: 'video', label: 'Video', icon: Video, description: 'Erklärungsvideo' },
-  { value: 'pdf', label: 'PDF', icon: File, description: 'PDF-Arbeitsblatt' },
-  { value: 'mixed', label: 'Gemischt', icon: Layers, description: 'Video + Text + PDF' },
-];
-
-function HomeworkSection({ 
-  lessonId,
-  homework,
-  onSave,
-  onDelete
-}: {
-  lessonId?: string;
-  homework: HomeworkData[];
-  onSave: (hw: HomeworkData) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [editingHw, setEditingHw] = useState<HomeworkData | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState<HomeworkData>({
-    title: '',
-    description: '',
-    deadline: '',
-    max_points: undefined,
-    is_active: true,
-    content_type: 'text',
-    vimeo_video_url: '',
-    duration_minutes: undefined,
-    text_content: '',
-    pdf_url: '',
-    pdf_name: '',
-  });
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      deadline: '',
-      max_points: undefined,
-      is_active: true,
-      content_type: 'text',
-      vimeo_video_url: '',
-      duration_minutes: undefined,
-      text_content: '',
-      pdf_url: '',
-      pdf_name: '',
-    });
-    setShowForm(false);
-    setEditingHw(null);
-  };
-
-  const handleSubmit = () => {
-    if (!formData.title.trim()) return;
-    onSave(editingHw ? { ...formData, id: editingHw.id } : formData);
-    resetForm();
-  };
-
-  // PDF Upload für Hausaufgaben
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !file.name.endsWith('.pdf')) {
-      alert('Bitte nur PDF-Dateien hochladen');
-      return;
-    }
-    
-    setUploading(true);
-    const uploadData = new FormData();
-    uploadData.append('file', file);
-    uploadData.append('folder', 'homework/pdf');
-    
-    try {
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        body: uploadData,
-      });
-      const data = await res.json();
-      setFormData(prev => ({ ...prev, pdf_url: data.url, pdf_name: file.name }));
-    } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Upload fehlgeschlagen');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="border-2 border-amber-200 rounded-lg overflow-hidden bg-amber-50/30">
-      {/* Header - Hervorgehoben */}
-      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-amber-100 to-orange-100 border-b border-amber-200">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
-            <BookOpen className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="font-semibold text-amber-800">📝 Hausaufgaben</span>
-          {homework.length > 0 && (
-            <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full">
-              {homework.length}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => { setShowForm(true); setEditingHw(null); }}
-          className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 flex items-center gap-1 font-medium"
-        >
-          <Plus className="w-3 h-3" />
-          Neue Hausaufgabe
-        </button>
-      </div>
-      
-      {/* Hausaufgaben-Liste */}
-      {homework.length > 0 && (
-        <div className="divide-y divide-amber-100">
-          {homework.map((hw, idx) => (
-            <div key={hw.id || idx} className="p-3 flex items-center gap-3 bg-white/50 hover:bg-white transition-colors">
-              {/* Icon basierend auf Content-Typ */}
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                hw.content_type === 'video' ? 'bg-blue-100 text-blue-600' :
-                hw.content_type === 'pdf' ? 'bg-red-100 text-red-600' :
-                hw.content_type === 'mixed' ? 'bg-purple-100 text-purple-600' :
-                'bg-amber-100 text-amber-600'
-              }`}>
-                {hw.content_type === 'video' ? <Video className="w-5 h-5" /> :
-                 hw.content_type === 'pdf' ? <File className="w-5 h-5" /> :
-                 hw.content_type === 'mixed' ? <Layers className="w-5 h-5" /> :
-                 <FileText className="w-5 h-5" />}
-              </div>
-              
-              <div className="flex-1">
-                <p className="font-semibold text-gray-800">{hw.title}</p>
-                <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                  {hw.deadline && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(hw.deadline).toLocaleDateString('de-DE')}
-                    </span>
-                  )}
-                  {hw.max_points && (
-                    <span className="text-amber-600 font-medium">{hw.max_points} Punkte</span>
-                  )}
-                  <span className="capitalize px-2 py-0.5 bg-gray-100 rounded">
-                    {HW_CONTENT_TYPES.find(t => t.value === hw.content_type)?.label || 'Text'}
-                  </span>
-                </div>
-              </div>
-              
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingHw(hw);
-                  setFormData(hw);
-                  setShowForm(true);
-                }}
-                className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              {hw.id && (
-                <button
-                  type="button"
-                  onClick={() => onDelete(hw.id!)}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      
-      {/* Erweitertes Formular */}
-      {showForm && (
-        <div className="p-4 bg-white border-t border-amber-200 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-gray-800">
-              {editingHw ? 'Hausaufgabe bearbeiten' : 'Neue Hausaufgabe'}
-            </h4>
-            <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          {/* Titel */}
-          <input
-            type="text"
-            placeholder="Titel der Hausaufgabe *"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-          />
-          
-          {/* Kurzbeschreibung */}
-          <textarea
-            placeholder="Kurze Beschreibung / Anweisungen"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg resize-none"
-          />
-          
-          {/* Content-Typ Auswahl */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Inhaltstyp</label>
-            <div className="grid grid-cols-4 gap-2">
-              {HW_CONTENT_TYPES.map(type => (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, content_type: type.value as any }))}
-                  className={`p-2 rounded-lg border-2 text-center transition-all ${
-                    formData.content_type === type.value 
-                      ? 'border-amber-500 bg-amber-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <type.icon className={`w-4 h-4 mx-auto mb-1 ${
-                    formData.content_type === type.value ? 'text-amber-600' : 'text-gray-400'
-                  }`} />
-                  <span className={`text-xs font-medium ${
-                    formData.content_type === type.value ? 'text-amber-600' : 'text-gray-600'
-                  }`}>{type.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Video-Bereich */}
-          {(formData.content_type === 'video' || formData.content_type === 'mixed') && (
-            <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2 text-blue-700">
-                <Video className="w-4 h-4" />
-                <span className="text-sm font-medium">Erklärungsvideo</span>
-              </div>
-              <input
-                type="url"
-                value={formData.vimeo_video_url || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, vimeo_video_url: e.target.value }))}
-                placeholder="https://vimeo.com/123456789"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-              />
-            </div>
-          )}
-          
-          {/* Text-Bereich */}
-          {(formData.content_type === 'text' || formData.content_type === 'mixed') && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-gray-700">
-                <FileText className="w-4 h-4" />
-                <span className="text-sm font-medium">Aufgabenstellung (Text)</span>
-              </div>
-              <TiptapEditor
-                value={formData.text_content || ''}
-                onChange={(val) => setFormData(prev => ({ ...prev, text_content: val }))}
-                placeholder="Detaillierte Aufgabenstellung hier eingeben..."
-                minHeight="150px"
-                maxHeight="300px"
-              />
-            </div>
-          )}
-          
-          {/* PDF-Bereich */}
-          {(formData.content_type === 'pdf' || formData.content_type === 'mixed') && (
-            <div className="space-y-2 p-3 bg-red-50 rounded-lg border border-red-200">
-              <div className="flex items-center gap-2 text-red-700">
-                <File className="w-4 h-4" />
-                <span className="text-sm font-medium">PDF-Arbeitsblatt</span>
-              </div>
-              {formData.pdf_url ? (
-                <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200">
-                  <File className="w-6 h-6 text-red-500" />
-                  <span className="flex-1 text-sm truncate">{formData.pdf_name || 'PDF-Datei'}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, pdf_url: '', pdf_name: '' }))}
-                    className="p-1 text-red-500 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:bg-red-100/50">
-                  {uploading ? (
-                    <Loader2 className="w-5 h-5 text-red-500 animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="w-5 h-5 text-red-400" />
-                      <span className="text-sm text-red-600">PDF hochladen</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handlePdfUpload}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                </label>
-              )}
-            </div>
-          )}
-
-          {/* Abgabe-Einstellungen */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Abgabefrist</label>
-              <input
-                type="datetime-local"
-                value={formData.deadline || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
-                className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Max. Punkte</label>
-              <input
-                type="number"
-                min="0"
-                placeholder="z.B. 100"
-                value={formData.max_points || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, max_points: parseInt(e.target.value) || undefined }))}
-                className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg"
-              />
-            </div>
-          </div>
-          
-          {/* Buttons */}
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!formData.title.trim()}
-              className="px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 font-medium"
-            >
-              {editingHw ? 'Aktualisieren' : 'Hausaufgabe hinzufügen'}
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {homework.length === 0 && !showForm && (
-        <div className="p-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
-            <BookOpen className="w-6 h-6 text-amber-500" />
-          </div>
-          <p className="text-sm text-gray-600 mb-2">Keine Hausaufgaben für diese Lektion</p>
-          <p className="text-xs text-gray-400">Fügen Sie Übungen, Arbeitsblätter oder Videos hinzu</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =========================================
 // Lektion Editor Modal (Erweitert)
 // =========================================
 function LessonModal({ 
@@ -616,14 +220,13 @@ function LessonModal({
   courseTitle: string;
 }) {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<'content' | 'homework'>('content');
   // Track ob der Slug manuell geändert wurde
   const [slugManuallyChanged, setSlugManuallyChanged] = useState(!!lesson?.slug);
   const [formData, setFormData] = useState({
     title: lesson?.title || '',
     slug: lesson?.slug || '',
     description: lesson?.description || '',
-    content_type: (lesson as any)?.content_type || 'video',
+      content_type: 'mixed',
     // Video
     vimeo_video_url: lesson?.vimeo_video_url || '',
     // Text
@@ -635,47 +238,8 @@ function LessonModal({
     is_free_preview: lesson?.is_free_preview || false,
     order: lesson?.order || nextOrder,
   });
-  const [homework, setHomework] = useState<HomeworkData[]>([]);
   const [saving, setSaving] = useState(false);
   const { generate, generating } = useAIGenerate();
-  
-  // Hausaufgaben laden wenn Lektion bearbeitet wird
-  useEffect(() => {
-    if (lesson?.id) {
-      loadHomework(lesson.id);
-    } else {
-      setHomework([]);
-    }
-  }, [lesson?.id]);
-  
-  const fetchHomework = async (lessonId: string): Promise<HomeworkData[]> => {
-    const res = await api.get(`/homework/admin/lesson/${lessonId}`);
-    const hwData = res.data || [];
-    return hwData.map((hw: any) => ({
-      id: hw.id,
-      title: hw.title,
-      description: hw.description,
-      deadline: hw.deadline ? new Date(hw.deadline).toISOString().slice(0, 16) : '',
-      max_points: hw.max_points,
-      content_type: hw.content_type || 'text',
-      vimeo_video_url: hw.vimeo_video_url || '',
-      duration_minutes: hw.duration_minutes,
-      text_content: hw.text_content || '',
-      pdf_url: hw.pdf_url || '',
-      pdf_name: hw.pdf_name || '',
-      is_active: hw.is_active !== false,
-    }));
-  };
-
-  const loadHomework = async (lessonId: string) => {
-    try {
-      const items = await fetchHomework(lessonId);
-      setHomework(items);
-    } catch (err) {
-      console.error('Fehler beim Laden der Hausaufgaben:', err);
-    }
-  };
-
   const generateSlug = (title: string) => {
     return title
       .toLowerCase()
@@ -711,11 +275,12 @@ function LessonModal({
     setSaving(true);
 
     try {
-      const payload = {
-        ...formData,
-        slug: formData.slug || generateSlug(formData.title),
-        course_id: courseId,
-      };
+        const payload = {
+          ...formData,
+          slug: formData.slug || generateSlug(formData.title),
+          course_id: courseId,
+          content_type: 'mixed',
+        };
 
       let result;
       if (lesson?.id) {
@@ -738,60 +303,7 @@ function LessonModal({
         toast.success('✅ Lektion erfolgreich erstellt!');
       }
 
-      // Hausaufgaben speichern
-      for (const hw of homework) {
-        try {
-          if (hw.id && hw.id.startsWith('temp-')) {
-            // Neue Hausaufgabe erstellen
-            const hwPayload = {
-              lesson_id: result.id || result.data?.id,
-              title: hw.title,
-              description: hw.description,
-              deadline: hw.deadline ? new Date(hw.deadline).toISOString() : null,
-              max_points: hw.max_points,
-              content_type: hw.content_type,
-              vimeo_video_url: hw.vimeo_video_url || null,
-              text_content: hw.text_content || null,
-              pdf_url: hw.pdf_url || null,
-              pdf_name: hw.pdf_name || null,
-              is_active: hw.is_active,
-            };
-            
-            await api.post('/homework/', hwPayload);
-          } else if (hw.id) {
-            // Bestehende Hausaufgabe aktualisieren
-            const hwPayload = {
-              title: hw.title,
-              description: hw.description,
-              deadline: hw.deadline ? new Date(hw.deadline).toISOString() : null,
-              max_points: hw.max_points,
-              content_type: hw.content_type,
-              vimeo_video_url: hw.vimeo_video_url || null,
-              text_content: hw.text_content || null,
-              pdf_url: hw.pdf_url || null,
-              pdf_name: hw.pdf_name || null,
-              is_active: hw.is_active,
-            };
-            await api.put(`/homework/${hw.id}`, hwPayload);
-          }
-        } catch (hwErr) {
-          console.error('Fehler beim Speichern der Hausaufgabe:', hwErr);
-          toast.error(`❌ Fehler beim Speichern der Hausaufgabe "${hw.title}"`);
-        }
-      }
-
-      let refreshedHomework: HomeworkData[] = [];
-      const lessonId = result.id || result.data?.id;
-      if (lessonId) {
-        try {
-          refreshedHomework = await fetchHomework(lessonId);
-          setHomework(refreshedHomework);
-        } catch (err) {
-          console.error('Fehler beim Aktualisieren der Hausaufgaben:', err);
-        }
-      }
-
-      onSave({ ...(result.data || result), homework: refreshedHomework });
+      onSave(result.data || result);
     } catch (err) {
       console.error('Error saving lesson:', err);
       toast.error('❌ Fehler beim Speichern der Lektion');
@@ -828,34 +340,9 @@ function LessonModal({
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('content')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 ${
-              activeTab === 'content' 
-                ? 'border-primary-500 text-primary-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Inhalt
-          </button>
-          <button
-            onClick={() => setActiveTab('homework')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 ${
-              activeTab === 'homework' 
-                ? 'border-primary-500 text-primary-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Hausaufgaben
-          </button>
-        </div>
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {activeTab === 'content' ? (
-            <>
+          <>
               {/* Titel & Slug */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -910,35 +397,12 @@ function LessonModal({
                 />
               </div>
 
-              {/* Content-Typ Auswahl */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Inhaltstyp</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {CONTENT_TYPES.map(type => (
-                    <button
-                      key={type.value}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, content_type: type.value }))}
-                      className={`p-3 rounded-lg border-2 text-center transition-all ${
-                        formData.content_type === type.value 
-                          ? 'border-primary-500 bg-primary-50' 
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <type.icon className={`w-5 h-5 mx-auto mb-1 ${
-                        formData.content_type === type.value ? 'text-primary-600' : 'text-gray-400'
-                      }`} />
-                      <span className={`text-xs font-medium ${
-                        formData.content_type === type.value ? 'text-primary-600' : 'text-gray-600'
-                      }`}>{type.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-gray-500">
+                Inhaltstyp: gemischt (Video, Text und PDF optional)
+              </p>
 
               {/* Video-Bereich */}
-              {(formData.content_type === 'video' || formData.content_type === 'mixed') && (
-                <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
+              <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2 text-blue-700">
                     <Video className="w-4 h-4" />
                     <span className="text-sm font-medium">Video</span>
@@ -967,11 +431,8 @@ function LessonModal({
                     </div>
                   )}
                 </div>
-              )}
-
               {/* Text-Bereich */}
-              {(formData.content_type === 'text' || formData.content_type === 'mixed') && (
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <div className="flex items-center gap-2 text-gray-700">
                     <FileText className="w-4 h-4" />
                     <span className="text-sm font-medium">Text-Inhalt</span>
@@ -986,11 +447,8 @@ function LessonModal({
                     maxHeight="400px"
                   />
                 </div>
-              )}
-
               {/* PDF-Bereich */}
-              {(formData.content_type === 'pdf' || formData.content_type === 'mixed') && (
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <div className="flex items-center gap-2 text-gray-700">
                     <File className="w-4 h-4" />
                     <span className="text-sm font-medium">PDF-Datei</span>
@@ -1002,8 +460,6 @@ function LessonModal({
                     onRemove={() => setFormData(prev => ({ ...prev, pdf_url: '', pdf_name: '' }))}
                   />
                 </div>
-              )}
-
               {/* Einstellungen */}
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
@@ -1029,21 +485,6 @@ function LessonModal({
                 </div>
               </div>
             </>
-          ) : (
-            /* Hausaufgaben Tab */
-            <HomeworkSection
-              lessonId={lesson?.id}
-              homework={homework}
-              onSave={(hw) => {
-                if (hw.id) {
-                  setHomework(prev => prev.map(h => h.id === hw.id ? hw : h));
-                } else {
-                  setHomework(prev => [...prev, { ...hw, id: `temp-${Date.now()}` }]);
-                }
-              }}
-              onDelete={(id) => setHomework(prev => prev.filter(h => h.id !== id))}
-            />
-          )}
         </div>
 
         {/* Footer */}
@@ -1066,7 +507,7 @@ function LessonModal({
 }
 
 // =========================================
-// Lektion Zeile (mit Hausaufgaben-Badge)
+// Lektion Zeile
 // =========================================
 function LessonRow({ 
   lesson, 
@@ -1087,14 +528,8 @@ function LessonRow({
   isFirst: boolean;
   isLast: boolean;
 }) {
-  const hasHomework = lesson.has_homework || (lesson.homework && lesson.homework.length > 0);
-  
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg group transition-colors ${
-      hasHomework 
-        ? 'bg-gradient-to-r from-gray-50 to-amber-50/50 hover:from-gray-100 hover:to-amber-100/50 border-l-4 border-l-amber-400' 
-        : 'bg-gray-50 hover:bg-gray-100'
-    }`}>
+    <div className="flex items-center gap-3 p-3 rounded-lg group transition-colors bg-gray-50 hover:bg-gray-100">
       {/* Drag Handle + Order */}
       <div className="flex items-center gap-2">
         <div className="flex flex-col">
@@ -1124,12 +559,6 @@ function LessonRow({
           <h4 className="font-medium text-gray-900 truncate">{lesson.title}</h4>
           {lesson.is_free_preview && (
             <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Frei</span>
-          )}
-          {/* Hausaufgaben-Badge */}
-          {hasHomework && (
-            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex items-center gap-1">
-              📝 Hausaufgabe
-            </span>
           )}
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">

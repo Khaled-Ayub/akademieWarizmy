@@ -290,14 +290,14 @@ export async function getCoursesByCategory(category: string): Promise<Course[]> 
 
 /**
  * Einzelne Lektion per Slug abrufen (inkl. Kurs-Info für Navigation)
- * Direkter Aufruf des Backend-Endpoints für volle Daten inkl. Hausaufgaben
+ * Direkter Aufruf des Backend-Endpoints für volle Daten
  */
 export async function getLessonBySlug(
   courseSlug: string,
   lessonSlug: string
 ): Promise<{ lesson: Lesson; course: Course; allLessons: Lesson[] } | null> {
   try {
-    // Direkt vom Backend laden (enthält bereits Hausaufgaben durch selectinload)
+    // Direkt vom Backend laden (inkl. Kurs-Details für Navigation)
     const response = await fetch(`${API_URL}/courses/${courseSlug}/lessons/${lessonSlug}`, {
       cache: 'no-store',
     });
