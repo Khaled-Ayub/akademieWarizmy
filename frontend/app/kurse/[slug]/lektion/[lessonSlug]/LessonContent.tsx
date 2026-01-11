@@ -397,6 +397,26 @@ export default function LessonContent({
                   </div>
                 )}
 
+                {lesson.text_content && (
+                  <div className="prose prose-gray max-w-none text-gray-700 mb-6 p-4 bg-white rounded-lg border border-gray-200">
+                    <div dangerouslySetInnerHTML={{ __html: lesson.text_content }} />
+                  </div>
+                )}
+
+                {lesson.pdf_url && (
+                  <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
+                    <a
+                      href={getMediaUrl(lesson.pdf_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                    >
+                      <Download className="w-5 h-5" />
+                      {lesson.pdf_name || 'PDF herunterladen'}
+                    </a>
+                  </div>
+                )}
+
                 {/* Lektion bereits abgeschlossen */}
                 {isCompleted && (
                   <div className="py-4 border-t border-gray-100">
