@@ -67,6 +67,7 @@ interface Lesson {
   title: string;
   slug: string;
   description: string;
+  section_title?: string;
   order: number;
   // Content-Typ
   content_type?: 'video' | 'text' | 'pdf' | 'mixed';
@@ -238,6 +239,7 @@ function LessonModal({
     title: lesson?.title || '',
     slug: lesson?.slug || '',
     description: lesson?.description || '',
+    section_title: (lesson as any)?.section_title || '',
       content_type: 'mixed',
     // Video
     vimeo_video_url: lesson?.vimeo_video_url || '',
@@ -292,6 +294,7 @@ function LessonModal({
       title: lesson?.title || '',
       slug: lesson?.slug || '',
       description: lesson?.description || '',
+      section_title: (lesson as any)?.section_title || '',
       content_type: 'mixed',
       vimeo_video_url: lesson?.vimeo_video_url || '',
       text_content: (lesson as any)?.text_content || '',
@@ -320,6 +323,7 @@ function LessonModal({
           title: prev.title || fullLesson.title || '',
           slug: prev.slug || fullLesson.slug || '',
           description: prev.description || fullLesson.description || '',
+          section_title: prev.section_title || fullLesson.section_title || '',
           vimeo_video_url: prev.vimeo_video_url || fullLesson.vimeo_video_url || '',
           text_content: prev.text_content || fullLesson.text_content || '',
           pdf_url: prev.pdf_url || fullLesson.pdf_url || '',
@@ -365,6 +369,7 @@ function LessonModal({
     try {
         const payload = {
           ...formData,
+          section_title: formData.section_title?.trim() || null,
           slug: formData.slug || generateSlug(formData.title),
           course_id: courseId,
           content_type: 'mixed',
@@ -626,6 +631,21 @@ function LessonModal({
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   placeholder="Kurze Beschreibung der Lektion..."
                 />
+              </div>
+
+              {/* Sektion */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sektion / Modul (optional)</label>
+                <input
+                  type="text"
+                  value={formData.section_title || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, section_title: e.target.value }))}
+                  placeholder="z.B. Grundlagen"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Gruppiert die Lektionen im Kursinhalt.
+                </p>
               </div>
 
               <p className="text-xs text-gray-500">
@@ -955,6 +975,11 @@ function LessonRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h4 className="font-medium text-gray-900 truncate">{lesson.title}</h4>
+          {lesson.section_title && (
+            <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+              {lesson.section_title}
+            </span>
+          )}
           {lesson.is_free_preview && (
             <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Frei</span>
           )}

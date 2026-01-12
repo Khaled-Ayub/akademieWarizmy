@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
       title: lessonData.title,
       slug: lessonData.slug,
       description: lessonData.description || '',
+      section_title: lessonData.section_title || null,
       order: lessonData.order || 1,
       content_type: lessonData.content_type || 'video',
       vimeo_video_url: lessonData.vimeo_video_url || null,

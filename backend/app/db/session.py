@@ -97,6 +97,7 @@ async def init_db():
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_opt_in boolean NOT NULL DEFAULT false"))
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_channel_opt_in boolean NOT NULL DEFAULT false"))
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed boolean NOT NULL DEFAULT false"))
+        await conn.execute(text("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS section_title varchar(255)"))
 
 
 async def close_db():

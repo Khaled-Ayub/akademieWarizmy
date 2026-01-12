@@ -35,6 +35,7 @@ class LessonBase(BaseModel):
     title: str
     slug: str
     description: Optional[str] = None
+    section_title: Optional[str] = None
     order: int = 0
     # Content-Typ (video, text, pdf, mixed)
     content_type: str = "video"
@@ -67,6 +68,7 @@ class LessonUpdate(BaseModel):
     title: Optional[str] = None
     slug: Optional[str] = None
     description: Optional[str] = None
+    section_title: Optional[str] = None
     order: Optional[int] = None
     # Content-Typ
     content_type: Optional[str] = None

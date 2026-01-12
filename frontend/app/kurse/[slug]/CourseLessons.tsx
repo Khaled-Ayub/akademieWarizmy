@@ -18,6 +18,8 @@ interface Lesson {
   duration_minutes?: number | null;
   is_free_preview?: boolean;
   order_index?: number;
+  order?: number;
+  section_title?: string | null;
 }
 
 interface CourseLessonsProps {
@@ -57,8 +59,28 @@ export default function CourseLessons({ courseId, courseSlug, lessons }: CourseL
     }
   };
 
-  // Sortiere Lektionen nach order_index (falls vorhanden)
-  const sortedLessons = [...lessons].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+  // Sortiere Lektionen nach order/order_index (falls vorhanden)
+  const sortedLessons = [...lessons].sort((a, b) => {
+    const orderA = a.order ?? a.order_index ?? 0;
+    const orderB = b.order ?? b.order_index ?? 0;
+    return orderA - orderB;
+  });
+  const lessonIndexMap = new Map(sortedLessons.map((lesson, index) => [lesson.id, index]));
+  const groupedLessons = (() => {
+    const groups: Array<{ title: string; lessons: Lesson[] }> = [];
+    const map = new Map<string, { title: string; lessons: Lesson[] }>();
+    sortedLessons.forEach((lesson) => {
+      const title = (lesson.section_title || '').trim() || 'Allgemein';
+      let group = map.get(title);
+      if (!group) {
+        group = { title, lessons: [] };
+        map.set(title, group);
+        groups.push(group);
+      }
+      group.lessons.push(lesson);
+    });
+    return groups;
+  })();
 
   // Filtere sichtbare Lektionen
   const getVisibleLessons = () => {
@@ -110,53 +132,60 @@ export default function CourseLessons({ courseId, courseSlug, lessons }: CourseL
       )}
 
       {/* Sichtbare Lektionen */}
-      <div className="space-y-3">
-        {sortedLessons.map((lesson, index) => {
-          const isAccessible = isEnrolled || lesson.is_free_preview || index === 0;
+      <div className="space-y-6">
+        {groupedLessons.map((group) => (
+          <div key={group.title} className="space-y-3">
+            <div className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {group.title}
+            </div>
+            {group.lessons.map((lesson) => {
+              const index = lessonIndexMap.get(lesson.id) ?? 0;
+              const isAccessible = isEnrolled || lesson.is_free_preview || index === 0;
           
-          if (isAccessible) {
-            return (
-              <Link
-                key={lesson.id}
-                href={`/kurse/${courseSlug}/lektion/${lesson.slug}`}
-                className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:border-primary-200 border border-transparent transition-colors group"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary-100 group-hover:bg-primary-500 flex items-center justify-center flex-shrink-0 transition-colors">
-                  <span className="text-primary-600 group-hover:text-white font-bold">
-                    {index + 1}
-                  </span>
+              if (isAccessible) {
+                return (
+                  <Link
+                    key={lesson.id}
+                    href={`/kurse/${courseSlug}/lektion/${lesson.slug}`}
+                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:border-primary-200 border border-transparent transition-colors group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary-100 group-hover:bg-primary-500 flex items-center justify-center flex-shrink-0 transition-colors">
+                      <span className="text-primary-600 group-hover:text-white font-bold">
+                        {index + 1}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 group-hover:text-primary-700">
+                        {lesson.title}
+                      </h3>
+                    </div>
+                    {lesson.is_free_preview && !isEnrolled && (
+                      <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                        Vorschau
+                      </span>
+                    )}
+                    <Play className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                  </Link>
+                );
+              }
+              // Gesperrte Lektion
+              return (
+                <div
+                  key={lesson.id}
+                  className="flex items-center gap-4 p-4 bg-gray-100 rounded-xl opacity-60 cursor-not-allowed"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    <span className="text-gray-500 font-bold">{index + 1}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-600">{lesson.title}</h3>
+                  </div>
+                  <Lock className="w-5 h-5 text-gray-400" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 group-hover:text-primary-700">
-                    {lesson.title}
-                  </h3>
-                </div>
-                {lesson.is_free_preview && !isEnrolled && (
-                  <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                    Vorschau
-                  </span>
-                )}
-                <Play className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
-              </Link>
-            );
-          } else {
-            // Gesperrte Lektion
-            return (
-              <div
-                key={lesson.id}
-                className="flex items-center gap-4 p-4 bg-gray-100 rounded-xl opacity-60 cursor-not-allowed"
-              >
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-500 font-bold">{index + 1}</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-600">{lesson.title}</h3>
-                </div>
-                <Lock className="w-5 h-5 text-gray-400" />
-              </div>
-            );
-          }
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* CTA für nicht eingeschriebene */}

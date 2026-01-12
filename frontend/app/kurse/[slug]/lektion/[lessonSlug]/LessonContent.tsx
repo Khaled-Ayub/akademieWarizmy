@@ -39,55 +39,81 @@ function LessonsSidebar({
   currentSlug: string;
   courseSlug: string;
 }) {
+  const sortedLessons = [...lessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const lessonIndexMap = new Map(sortedLessons.map((lesson, index) => [lesson.id, index]));
+  const groupedLessons = (() => {
+    const groups: Array<{ title: string; lessons: Lesson[] }> = [];
+    const map = new Map<string, { title: string; lessons: Lesson[] }>();
+    sortedLessons.forEach((lesson) => {
+      const title = (lesson.section_title || '').trim() || 'Allgemein';
+      let group = map.get(title);
+      if (!group) {
+        group = { title, lessons: [] };
+        map.set(title, group);
+        groups.push(group);
+      }
+      group.lessons.push(lesson);
+    });
+    return groups;
+  })();
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center gap-2 text-gray-700 font-medium">
           <List className="w-4 h-4" />
           <span>Kursinhalt</span>
-          <span className="text-gray-400 text-sm ml-auto">{lessons.length} Lektionen</span>
+          <span className="text-gray-400 text-sm ml-auto">{sortedLessons.length} Lektionen</span>
         </div>
       </div>
       
       <div className="max-h-[60vh] overflow-y-auto">
-        {lessons.map((lesson, index) => {
-          const isActive = lesson.slug === currentSlug;
-          const lessonUrl = `/kurse/${courseSlug}/lektion/${lesson.slug}`;
+        {groupedLessons.map((group, groupIndex) => (
+          <div key={`${group.title}-${groupIndex}`}>
+            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 bg-gray-50 border-b border-gray-100">
+              {group.title}
+            </div>
+            {group.lessons.map((lesson) => {
+              const index = lessonIndexMap.get(lesson.id) ?? 0;
+              const isActive = lesson.slug === currentSlug;
+              const lessonUrl = `/kurse/${courseSlug}/lektion/${lesson.slug}`;
 
-          return (
-            <Link
-              key={lesson.id}
-              href={lessonUrl}
-              className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${
-                isActive 
-                  ? 'bg-primary-50 border-l-4 border-l-primary-500' 
-                  : 'hover:bg-gray-50'
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium ${
-                isActive 
-                  ? 'bg-primary-500 text-white' 
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
-                {index + 1}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className={`text-sm truncate ${isActive ? 'text-primary-700 font-medium' : 'text-gray-700'}`}>
-                    {lesson.title}
-                  </p>
-                </div>
-              </div>
-              
-              {lesson.is_free_preview && (
-                <span className="text-[10px] font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
-                  Frei
-                </span>
-              )}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={lesson.id}
+                  href={lessonUrl}
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-b-0 transition-colors ${
+                    isActive 
+                      ? 'bg-primary-50 border-l-4 border-l-primary-500' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium ${
+                    isActive 
+                      ? 'bg-primary-500 text-white' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-sm truncate ${isActive ? 'text-primary-700 font-medium' : 'text-gray-700'}`}>
+                        {lesson.title}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {lesson.is_free_preview && (
+                    <span className="text-[10px] font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
+                      Frei
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

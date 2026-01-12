@@ -53,6 +53,7 @@ export interface Lesson {
   title: string;
   slug: string;
   description: string | null;
+  section_title?: string | null;
   order: number;
   vimeo_video_id: string | null;
   vimeo_video_url: string | null;

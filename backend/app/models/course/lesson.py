@@ -75,6 +75,11 @@ class Lesson(Base):
         nullable=True,
         comment="Beschreibung (HTML/Markdown)"
     )
+    section_title = Column(
+        String(255),
+        nullable=True,
+        comment="Sektion/Modul fuer Gruppierung"
+    )
     order = Column(
         Integer, 
         default=0, 
