@@ -286,6 +286,58 @@ function LessonModal({
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   };
+  useEffect(() => {
+    setSlugManuallyChanged(!!lesson?.slug);
+    setFormData({
+      title: lesson?.title || '',
+      slug: lesson?.slug || '',
+      description: lesson?.description || '',
+      content_type: 'mixed',
+      vimeo_video_url: lesson?.vimeo_video_url || '',
+      text_content: (lesson as any)?.text_content || '',
+      pdf_url: (lesson as any)?.pdf_url || '',
+      pdf_name: (lesson as any)?.pdf_name || '',
+      is_free_preview: lesson?.is_free_preview || false,
+      order: lesson?.order || nextOrder,
+    });
+  }, [lesson?.id, nextOrder]);
+
+  useEffect(() => {
+    if (!lesson?.id) return;
+    let isActive = true;
+
+    const loadLessonDetails = async () => {
+      try {
+        const res = await fetch(/api/admin/lessons?course_id=, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data?.lessons || data?.data?.lessons || [];
+        const fullLesson = list.find((item: any) => String(item.id || item.lesson_id) === String(lesson.id));
+        if (!isActive || !fullLesson) return;
+
+        setFormData(prev => ({
+          ...prev,
+          title: prev.title || fullLesson.title || '',
+          slug: prev.slug || fullLesson.slug || '',
+          description: prev.description || fullLesson.description || '',
+          vimeo_video_url: prev.vimeo_video_url || fullLesson.vimeo_video_url || '',
+          text_content: prev.text_content || fullLesson.text_content || '',
+          pdf_url: prev.pdf_url || fullLesson.pdf_url || '',
+          pdf_name: prev.pdf_name || fullLesson.pdf_name || '',
+          is_free_preview: prev.is_free_preview ?? fullLesson.is_free_preview ?? false,
+          order: prev.order || fullLesson.order || prev.order,
+        }));
+      } catch (err) {
+        console.error('Error loading lesson details:', err);
+      }
+    };
+
+    loadLessonDetails();
+
+    return () => {
+      isActive = false;
+    };
+  }, [lesson?.id, courseId]);
 
   // Titel ändern und Slug automatisch generieren (wenn nicht manuell geändert)
   const handleTitleChange = (newTitle: string) => {
@@ -590,11 +642,11 @@ function LessonModal({
                     type="url"
                     value={formData.vimeo_video_url}
                     onChange={(e) => setFormData(prev => ({ ...prev, vimeo_video_url: e.target.value }))}
-                    placeholder="https://vimeo.com/123456789"
+                    placeholder="https://vimeo.com/123456789 oder https://youtu.be/VIDEO_ID"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <p className="text-xs text-blue-600">
-                    Unterstützte Formate: vimeo.com/123, player.vimeo.com/video/123, vimeo.com/manage/videos/123
+                    Unterstutzte Formate: vimeo.com/123, player.vimeo.com/video/123, vimeo.com/manage/videos/123, youtube.com/watch?v=VIDEO_ID, youtu.be/VIDEO_ID
                   </p>
                   {/* Video-Vorschau */}
                   {formData.vimeo_video_url && (
@@ -1328,16 +1380,16 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vorschau-Video (Vimeo Link)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vorschau-Video (Vimeo/YouTube Link)</label>
               <input
                 type="url"
                 value={formData.preview_video_url}
                 onChange={(e) => setFormData(prev => ({ ...prev, preview_video_url: e.target.value }))}
-                placeholder="https://vimeo.com/123456789"
+                placeholder="https://vimeo.com/123456789 oder https://youtu.be/VIDEO_ID"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Unterstützte Formate: vimeo.com/123, player.vimeo.com/video/123, vimeo.com/manage/videos/123
+                Unterstutzte Formate: vimeo.com/123, player.vimeo.com/video/123, vimeo.com/manage/videos/123, youtube.com/watch?v=VIDEO_ID, youtu.be/VIDEO_ID
               </p>
               {/* Video-Vorschau für Kurs */}
               {formData.preview_video_url && (
@@ -1586,3 +1638,5 @@ export default function KursEditorPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+

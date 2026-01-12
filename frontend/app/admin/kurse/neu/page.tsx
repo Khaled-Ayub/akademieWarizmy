@@ -322,15 +322,15 @@ export default function NeuKursPage() {
             <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} rows={5} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vorschau-Video (Vimeo Link)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vorschau-Video (Vimeo/YouTube Link)</label>
             <input 
               type="url" 
               value={formData.preview_video_url} 
               onChange={(e) => setFormData(prev => ({ ...prev, preview_video_url: e.target.value }))} 
-              placeholder="https://vimeo.com/123456789"
+              placeholder="https://vimeo.com/123456789 oder https://youtu.be/VIDEO_ID"
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" 
             />
-            <p className="mt-1 text-xs text-gray-500">Gib den kompletten Vimeo-Link ein</p>
+            <p className="mt-1 text-xs text-gray-500">Gib den kompletten Vimeo- oder YouTube-Link ein</p>
           </div>
         </div>
 
@@ -526,4 +526,5 @@ export default function NeuKursPage() {
     </div>
   );
 }
+
 

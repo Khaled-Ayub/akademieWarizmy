@@ -110,6 +110,36 @@ function extractVimeoId(input: string): string | null {
 }
 
 /**
+ * Extrahiert die YouTube Video-ID aus verschiedenen URL-Formaten
+ */
+function extractYouTubeId(input: string): string | null {
+  if (!input || typeof input !== 'string') return null;
+
+  const trimmed = input.trim();
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const shortMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch) return shortMatch[1];
+
+  const embedMatch = trimmed.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+  if (embedMatch) return embedMatch[1];
+
+  const shortsMatch = trimmed.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shortsMatch) return shortsMatch[1];
+
+  const liveMatch = trimmed.match(/youtube\.com\/live\/([a-zA-Z0-9_-]{11})/);
+  if (liveMatch) return liveMatch[1];
+
+  const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch) return watchMatch[1];
+
+  return null;
+}
+
+/**
  * Formatiert Sekunden in MM:SS Format
  */
 function formatTime(seconds: number): string {
@@ -135,17 +165,19 @@ export default function VimeoPlayer({
   className = '',
 }: VimeoPlayerProps) {
   // Video-ID und Hash ermitteln
-  const vimeoData = videoUrl ? extractVimeoData(videoUrl) : null;
-  const id = videoId || vimeoData?.id || null;
-  const hash = vimeoData?.hash || null;
+  const youtubeId = videoUrl ? extractYouTubeId(videoUrl) : null;
+  const isYouTube = Boolean(youtubeId);
+  const vimeoData = !isYouTube && videoUrl ? extractVimeoData(videoUrl) : null;
+  const id = !isYouTube ? (videoId || vimeoData?.id || null) : null;
+  const hash = !isYouTube ? (vimeoData?.hash || null) : null;
   
   // Debug-Output (nur in Entwicklung)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[VimeoPlayer] Props:', { videoId, videoUrl });
-      console.log('[VimeoPlayer] Extracted:', { id, hash });
+      console.log('[VimeoPlayer] Extracted:', { id, hash, youtubeId });
     }
-  }, [videoId, videoUrl, id, hash]);
+  }, [videoId, videoUrl, id, hash, youtubeId]);
   
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -164,7 +196,7 @@ export default function VimeoPlayer({
   
   // Vimeo Video-Metadaten laden (Thumbnail, Dauer)
   useEffect(() => {
-    if (!id) return;
+    if (!id || isYouTube) return;
     
     async function fetchMetadata() {
       try {
@@ -189,10 +221,11 @@ export default function VimeoPlayer({
     }
     
     fetchMetadata();
-  }, [id, hash]);
+  }, [id, hash, isYouTube]);
   
   // Iframe Message Handler für Vimeo Player Events
   useEffect(() => {
+    if (isYouTube) return;
     function handleMessage(event: MessageEvent) {
       // Nur Vimeo Events verarbeiten
       if (!event.origin.includes('vimeo.com')) return;
@@ -230,7 +263,7 @@ export default function VimeoPlayer({
     
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onProgress, onComplete]);
+  }, [onProgress, onComplete, isYouTube]);
   
   // Controls Auto-Hide
   useEffect(() => {
@@ -305,7 +338,7 @@ export default function VimeoPlayer({
   }, [currentTime, sendCommand]);
   
   // Kein Video verfügbar
-  if (!id) {
+  if (!id && !youtubeId) {
     return (
       <div className={`aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl flex items-center justify-center ${className}`}>
         <div className="text-center text-gray-400 p-6">
@@ -326,6 +359,8 @@ export default function VimeoPlayer({
                 <li>vimeo.com/123456789</li>
                 <li>player.vimeo.com/video/123456789</li>
                 <li>vimeo.com/manage/videos/123456789</li>
+                <li>youtube.com/watch?v=VIDEO_ID</li>
+                <li>youtu.be/VIDEO_ID</li>
                 <li>Nur die Video-ID: 123456789</li>
               </ul>
             </div>
@@ -334,7 +369,36 @@ export default function VimeoPlayer({
       </div>
     );
   }
-  
+  if (youtubeId) {
+    const embedUrl = new URL(`https://www.youtube.com/embed/${youtubeId}`);
+    embedUrl.searchParams.set('rel', '0');
+    embedUrl.searchParams.set('modestbranding', '1');
+    embedUrl.searchParams.set('playsinline', '1');
+    embedUrl.searchParams.set('controls', '1');
+    if (autoplay) embedUrl.searchParams.set('autoplay', '1');
+    if (muted) embedUrl.searchParams.set('mute', '1');
+    if (loop) {
+      embedUrl.searchParams.set('loop', '1');
+      embedUrl.searchParams.set('playlist', youtubeId);
+    }
+
+    return (
+      <div 
+        ref={containerRef}
+        className={`relative aspect-video bg-gray-900 rounded-xl overflow-hidden ${className}`}
+      >
+        <iframe
+          ref={iframeRef}
+          src={embedUrl.toString()}
+          className="w-full h-full"
+          frameBorder="0"
+          allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+          title={title || 'YouTube Player'}
+        />
+      </div>
+    );
+  }
+
   // Fortschritt berechnen
   const progressPercent = videoDuration > 0 ? (currentTime / videoDuration) * 100 : 0;
   
@@ -377,4 +441,7 @@ export default function VimeoPlayer({
     </div>
   );
 }
+
+
+
 
