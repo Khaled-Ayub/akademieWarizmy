@@ -44,6 +44,8 @@ from app.models.course import (
     Lesson,
     ContentType,
     QuestionType,
+    Homework,
+    HomeworkSubmission,
 )
 
 # Klassen-Modelle
@@ -135,6 +137,8 @@ __all__ = [
     "Lesson",
     "ContentType",
     "QuestionType",
+    "Homework",
+    "HomeworkSubmission",
     
     # =========================================
     # Class (Klassen)

@@ -22,7 +22,9 @@ import {
   ChevronUp,
   X,
   Sparkles,
-  ImagePlus
+  ImagePlus,
+  ClipboardList,
+  Calendar,
 } from 'lucide-react';
 
 // Toast für Benachrichtigungen
@@ -80,6 +82,16 @@ interface Lesson {
   is_free_preview: boolean;
   isNew?: boolean;
   isEditing?: boolean;
+}
+
+interface Homework {
+  id?: string;
+  lesson_id?: string;
+  title: string;
+  description?: string;
+  deadline: string;
+  max_points?: number | null;
+  is_active: boolean;
 }
 
 interface Course {
@@ -239,7 +251,31 @@ function LessonModal({
     order: lesson?.order || nextOrder,
   });
   const [saving, setSaving] = useState(false);
+  const [homeworkItems, setHomeworkItems] = useState<Homework[]>([]);
+  const [homeworkLoading, setHomeworkLoading] = useState(false);
+  const [homeworkSaving, setHomeworkSaving] = useState(false);
+  const [newHomework, setNewHomework] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    max_points: '',
+    is_active: true,
+  });
   const { generate, generating } = useAIGenerate();
+  const toLocalInputValue = (isoDate?: string) => {
+    if (!isoDate) return '';
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
+
+  const toIsoFromLocal = (localValue: string) => {
+    if (!localValue) return '';
+    const date = new Date(localValue);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString();
+  };
   const generateSlug = (title: string) => {
     return title
       .toLowerCase()
@@ -324,6 +360,149 @@ function LessonModal({
     });
     if (improved) {
       setFormData(prev => ({ ...prev, text_content: improved }));
+    }
+  };
+
+  useEffect(() => {
+    if (!lesson?.id) {
+      setHomeworkItems([]);
+      setNewHomework({
+        title: '',
+        description: '',
+        deadline: '',
+        max_points: '',
+        is_active: true,
+      });
+      return;
+    }
+
+    const loadHomework = async () => {
+      setHomeworkLoading(true);
+      try {
+        const res = await fetch(`/api/admin/homework?lesson_id=${lesson.id}`);
+        if (!res.ok) {
+          throw new Error('Hausaufgaben konnten nicht geladen werden');
+        }
+        const data = await res.json();
+        setHomeworkItems(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error loading homework:', err);
+      } finally {
+        setHomeworkLoading(false);
+      }
+    };
+
+    loadHomework();
+  }, [lesson?.id]);
+
+  const handleCreateHomework = async () => {
+    if (!lesson?.id) {
+      toast.error('Bitte speichere zuerst die Lektion');
+      return;
+    }
+    if (!newHomework.title.trim() || !newHomework.deadline) {
+      toast.error('Titel und Frist sind erforderlich');
+      return;
+    }
+
+    const deadlineIso = toIsoFromLocal(newHomework.deadline);
+    if (!deadlineIso) {
+      toast.error('Bitte eine gueltige Frist eingeben');
+      return;
+    }
+
+    setHomeworkSaving(true);
+    try {
+      const payload = {
+        lesson_id: lesson.id,
+        title: newHomework.title.trim(),
+        description: newHomework.description?.trim() || null,
+        deadline: deadlineIso,
+        max_points: newHomework.max_points ? parseInt(newHomework.max_points, 10) : null,
+        is_active: newHomework.is_active,
+      };
+
+      const res = await fetch('/api/admin/homework', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error('Hausaufgabe konnte nicht erstellt werden');
+      }
+      const created = await res.json();
+      setHomeworkItems(prev => [...prev, created]);
+      setNewHomework({
+        title: '',
+        description: '',
+        deadline: '',
+        max_points: '',
+        is_active: true,
+      });
+      toast.success('Hausaufgabe erstellt');
+    } catch (err) {
+      console.error('Error creating homework:', err);
+      toast.error('Fehler beim Erstellen der Hausaufgabe');
+    } finally {
+      setHomeworkSaving(false);
+    }
+  };
+
+  const handleUpdateHomework = async (homework: Homework) => {
+    if (!homework.id) return;
+    if (!homework.title.trim() || !homework.deadline) {
+      toast.error('Titel und Frist sind erforderlich');
+      return;
+    }
+
+    setHomeworkSaving(true);
+    try {
+      const payload = {
+        title: homework.title.trim(),
+        description: homework.description?.trim() || null,
+        deadline: homework.deadline,
+        max_points: homework.max_points ?? null,
+        is_active: homework.is_active,
+      };
+
+      const res = await fetch(`/api/admin/homework/${homework.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error('Hausaufgabe konnte nicht gespeichert werden');
+      }
+      const updated = await res.json();
+      setHomeworkItems(prev => prev.map(item => (item.id === updated.id ? updated : item)));
+      toast.success('Hausaufgabe gespeichert');
+    } catch (err) {
+      console.error('Error updating homework:', err);
+      toast.error('Fehler beim Speichern der Hausaufgabe');
+    } finally {
+      setHomeworkSaving(false);
+    }
+  };
+
+  const handleDeleteHomework = async (homeworkId?: string) => {
+    if (!homeworkId) return;
+    if (!confirm('Hausaufgabe wirklich loeschen?')) return;
+
+    setHomeworkSaving(true);
+    try {
+      const res = await fetch(`/api/admin/homework/${homeworkId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error('Hausaufgabe konnte nicht geloescht werden');
+      }
+      setHomeworkItems(prev => prev.filter(item => item.id !== homeworkId));
+      toast.success('Hausaufgabe geloescht');
+    } catch (err) {
+      console.error('Error deleting homework:', err);
+      toast.error('Fehler beim Loeschen der Hausaufgabe');
+    } finally {
+      setHomeworkSaving(false);
     }
   };
 
@@ -460,6 +639,173 @@ function LessonModal({
                     onRemove={() => setFormData(prev => ({ ...prev, pdf_url: '', pdf_name: '' }))}
                   />
                 </div>
+              {/* Hausaufgaben */}
+              <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <ClipboardList className="w-4 h-4" />
+                  <span className="text-sm font-medium">Hausaufgaben</span>
+                </div>
+
+                {!lesson?.id ? (
+                  <p className="text-xs text-gray-500">
+                    Speichere die Lektion, um Hausaufgaben hinzuzufuegen.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-600">Neue Hausaufgabe</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          value={newHomework.title}
+                          onChange={(e) => setNewHomework(prev => ({ ...prev, title: e.target.value }))}
+                          placeholder="Titel"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <div className="relative">
+                          <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="datetime-local"
+                            value={newHomework.deadline}
+                            onChange={(e) => setNewHomework(prev => ({ ...prev, deadline: e.target.value }))}
+                            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          />
+                        </div>
+                      </div>
+                      <textarea
+                        value={newHomework.description}
+                        onChange={(e) => setNewHomework(prev => ({ ...prev, description: e.target.value }))}
+                        rows={2}
+                        placeholder="Beschreibung / Aufgabenstellung"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      />
+                      <div className="flex flex-wrap items-center gap-4">
+                        <input
+                          type="number"
+                          min="0"
+                          value={newHomework.max_points}
+                          onChange={(e) => setNewHomework(prev => ({ ...prev, max_points: e.target.value }))}
+                          placeholder="Max. Punkte"
+                          className="w-36 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <label className="flex items-center gap-2 text-sm text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={newHomework.is_active}
+                            onChange={(e) => setNewHomework(prev => ({ ...prev, is_active: e.target.checked }))}
+                            className="w-4 h-4 rounded"
+                          />
+                          Aktiv
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleCreateHomework}
+                          disabled={homeworkSaving}
+                          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                        >
+                          {homeworkSaving ? 'Speichern...' : 'Hausaufgabe erstellen'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-gray-600">Bestehende Hausaufgaben</p>
+                      {homeworkLoading ? (
+                        <p className="text-xs text-gray-500">Lade Hausaufgaben...</p>
+                      ) : homeworkItems.length === 0 ? (
+                        <p className="text-xs text-gray-500">Noch keine Hausaufgaben.</p>
+                      ) : (
+                        homeworkItems.map((homework) => (
+                          <div key={homework.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                            <div className="grid grid-cols-2 gap-3">
+                              <input
+                                type="text"
+                                value={homework.title}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setHomeworkItems(prev => prev.map(item => (
+                                    item.id === homework.id ? { ...item, title: value } : item
+                                  )));
+                                }}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              />
+                              <input
+                                type="datetime-local"
+                                value={toLocalInputValue(homework.deadline)}
+                                onChange={(e) => {
+                                  const isoValue = toIsoFromLocal(e.target.value);
+                                  setHomeworkItems(prev => prev.map(item => (
+                                    item.id === homework.id ? { ...item, deadline: isoValue } : item
+                                  )));
+                                }}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              />
+                            </div>
+                            <textarea
+                              value={homework.description || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setHomeworkItems(prev => prev.map(item => (
+                                  item.id === homework.id ? { ...item, description: value } : item
+                                )));
+                              }}
+                              rows={2}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                            />
+                            <div className="flex flex-wrap items-center gap-4">
+                              <input
+                                type="number"
+                                min="0"
+                                value={homework.max_points ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setHomeworkItems(prev => prev.map(item => (
+                                    item.id === homework.id
+                                      ? { ...item, max_points: value === '' ? null : parseInt(value, 10) }
+                                      : item
+                                  )));
+                                }}
+                                placeholder="Max. Punkte"
+                                className="w-32 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              />
+                              <label className="flex items-center gap-2 text-sm text-gray-600">
+                                <input
+                                  type="checkbox"
+                                  checked={homework.is_active}
+                                  onChange={(e) => {
+                                    const value = e.target.checked;
+                                    setHomeworkItems(prev => prev.map(item => (
+                                      item.id === homework.id ? { ...item, is_active: value } : item
+                                    )));
+                                  }}
+                                  className="w-4 h-4 rounded"
+                                />
+                                Aktiv
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateHomework(homework)}
+                                disabled={homeworkSaving}
+                                className="px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                              >
+                                Speichern
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteHomework(homework.id)}
+                                disabled={homeworkSaving}
+                                className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Loeschen
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               {/* Einstellungen */}
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>

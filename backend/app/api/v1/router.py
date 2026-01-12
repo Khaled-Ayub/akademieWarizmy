@@ -21,6 +21,7 @@ from app.routers import (
     content,
     upload,
     locations,
+    homework,
 )
 from app.routers.admin_announcements import router as admin_announcements_router
 
@@ -61,6 +62,15 @@ api_router.include_router(
     courses.router,
     prefix="/courses",
     tags=["Kurse"]
+)
+
+# =========================================
+# Hausaufgaben
+# =========================================
+api_router.include_router(
+    homework.router,
+    prefix="/homework",
+    tags=["Hausaufgaben"]
 )
 
 # =========================================

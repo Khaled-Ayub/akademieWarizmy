@@ -387,6 +387,62 @@ export const usersApi = {
 };
 
 // =========================================
+// Homework API
+// =========================================
+export const homeworkApi = {
+  /**
+   * Hausaufgaben einer Lektion abrufen (Studenten)
+   */
+  getByLesson: async (lessonId: string) => {
+    const response = await api.get(`/homework/lesson/${lessonId}`);
+    return response.data;
+  },
+
+  /**
+   * Eigene Abgabe abrufen
+   */
+  getMySubmission: async (homeworkId: string) => {
+    try {
+      const response = await api.get(`/homework/my-submission/${homeworkId}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Datei fuer Abgabe hochladen
+   */
+  uploadSubmissionFile: async (file: File, folder: string = 'homework/submissions') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+
+    const response = await api.post('/upload/any', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /**
+   * Hausaufgabe abgeben oder aktualisieren
+   */
+  submit: async (homeworkId: string, data: {
+    file_url: string;
+    file_name?: string;
+    file_type?: string;
+    file_size?: number;
+    notes?: string;
+  }) => {
+    const response = await api.post(`/homework/submit/${homeworkId}`, data);
+    return response.data;
+  },
+};
+
+// =========================================
 // Sessions API
 // =========================================
 export const sessionsApi = {

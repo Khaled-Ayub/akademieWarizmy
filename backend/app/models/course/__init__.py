@@ -16,6 +16,10 @@ from app.models.course.lesson import (
     ContentType,
     QuestionType,
 )
+from app.models.course.homework import (
+    Homework,
+    HomeworkSubmission,
+)
 __all__ = [
     # Course
     "Course",
@@ -28,5 +32,8 @@ __all__ = [
     "Lesson",
     "ContentType",
     "QuestionType",
+    # Homework
+    "Homework",
+    "HomeworkSubmission",
 ]
 

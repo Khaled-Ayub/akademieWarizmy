@@ -10,15 +10,18 @@ import Link from 'next/link';
 import { 
   ChevronLeft,
   ChevronRight,
-  Play,
   FileText,
+  ClipboardList,
   Download,
   CheckCircle,
   CheckCircle2,
   List,
+  Calendar,
+  Clock,
+  Upload,
 } from 'lucide-react';
 import { getMediaUrl, Lesson } from '@/lib/content';
-import { usersApi } from '@/lib/api';
+import { homeworkApi, usersApi } from '@/lib/api';
 import { notifyProgressChange } from '@/hooks/useProgressSync';
 import VimeoPlayer from '@/components/VimeoPlayer';
 import LessonNavbar from '@/components/LessonNavbar';
@@ -118,6 +121,289 @@ function MaterialsSection({ materials }: { materials?: { name: string; url: stri
           </a>
         ))}
       </div>
+    </div>
+  );
+}
+
+// =========================================
+// Hausaufgaben-Sektion
+// =========================================
+interface HomeworkItem {
+  id: string;
+  lesson_id: string;
+  title: string;
+  description?: string | null;
+  deadline: string;
+  max_points?: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface HomeworkSubmission {
+  id: string;
+  homework_id: string;
+  student_id: string;
+  file_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
+  notes?: string | null;
+  submitted_at: string;
+  updated_at: string;
+}
+
+function formatDeadline(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('de-DE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
+function getRemainingTime(isoDate: string, now: Date) {
+  const deadline = new Date(isoDate);
+  const diffMs = deadline.getTime() - now.getTime();
+  if (Number.isNaN(deadline.getTime()) || diffMs <= 0) {
+    return { label: 'Frist abgelaufen', isOverdue: true };
+  }
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  return {
+    label: `Noch ${days} Tage ${hours} Std ${minutes} Min`,
+    isOverdue: false,
+  };
+}
+
+function HomeworkSection({ lessonId }: { lessonId?: string }) {
+  const [homeworkItems, setHomeworkItems] = useState<HomeworkItem[]>([]);
+  const [homeworkLoading, setHomeworkLoading] = useState(false);
+  const [homeworkError, setHomeworkError] = useState<string | null>(null);
+  const [homeworkSubmissions, setHomeworkSubmissions] = useState<Record<string, HomeworkSubmission | null>>({});
+  const [homeworkFiles, setHomeworkFiles] = useState<Record<string, File | null>>({});
+  const [homeworkSubmitting, setHomeworkSubmitting] = useState<Record<string, boolean>>({});
+  const [homeworkErrors, setHomeworkErrors] = useState<Record<string, string | null>>({});
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const loadHomework = async () => {
+      if (!lessonId) return;
+      setHomeworkLoading(true);
+      setHomeworkError(null);
+
+      try {
+        const data = await homeworkApi.getByLesson(lessonId);
+        setHomeworkItems(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        if (err?.response?.status === 401) {
+          setHomeworkItems([]);
+          setHomeworkError(null);
+          return;
+        }
+        console.error('Error loading homework:', err);
+        setHomeworkError('Hausaufgaben konnten nicht geladen werden.');
+      } finally {
+        setHomeworkLoading(false);
+      }
+    };
+
+    loadHomework();
+  }, [lessonId]);
+
+  useEffect(() => {
+    if (!homeworkItems.length) {
+      setHomeworkSubmissions({});
+      return;
+    }
+
+    let isActive = true;
+
+    const loadSubmissions = async () => {
+      const entries = await Promise.all(
+        homeworkItems.map(async (homework) => {
+          try {
+            const submission = await homeworkApi.getMySubmission(homework.id);
+            return [homework.id, submission] as const;
+          } catch (err) {
+            console.error('Error loading submission:', err);
+            return [homework.id, null] as const;
+          }
+        })
+      );
+
+      if (isActive) {
+        setHomeworkSubmissions(Object.fromEntries(entries));
+      }
+    };
+
+    loadSubmissions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [homeworkItems]);
+
+  const handleSubmit = async (homeworkId: string) => {
+    const file = homeworkFiles[homeworkId];
+    if (!file) {
+      setHomeworkErrors(prev => ({ ...prev, [homeworkId]: 'Bitte eine Datei auswahlen.' }));
+      return;
+    }
+
+    setHomeworkErrors(prev => ({ ...prev, [homeworkId]: null }));
+    setHomeworkSubmitting(prev => ({ ...prev, [homeworkId]: true }));
+
+    try {
+      const upload = await homeworkApi.uploadSubmissionFile(file, 'homework/submissions');
+      if (!upload?.url) {
+        throw new Error('Upload fehlgeschlagen');
+      }
+
+      const submission = await homeworkApi.submit(homeworkId, {
+        file_url: upload.url,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+      });
+
+      setHomeworkSubmissions(prev => ({ ...prev, [homeworkId]: submission }));
+      setHomeworkFiles(prev => ({ ...prev, [homeworkId]: null }));
+    } catch (err) {
+      console.error('Error submitting homework:', err);
+      setHomeworkErrors(prev => ({ ...prev, [homeworkId]: 'Abgabe fehlgeschlagen. Bitte erneut versuchen.' }));
+    } finally {
+      setHomeworkSubmitting(prev => ({ ...prev, [homeworkId]: false }));
+    }
+  };
+
+  if (!lessonId) return null;
+  if (!homeworkLoading && homeworkItems.length === 0 && !homeworkError) return null;
+
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <ClipboardList className="w-5 h-5 text-primary-500" />
+        <h3 className="text-lg font-bold text-gray-900">Hausaufgaben</h3>
+      </div>
+
+      {homeworkLoading && (
+        <div className="text-sm text-gray-500">Hausaufgaben werden geladen...</div>
+      )}
+
+      {homeworkError && (
+        <div className="text-sm text-red-600">{homeworkError}</div>
+      )}
+
+      {!homeworkLoading && homeworkItems.length > 0 && (
+        <div className="space-y-4">
+          {homeworkItems.map((homework) => {
+            const submission = homeworkSubmissions[homework.id];
+            const { label, isOverdue } = getRemainingTime(homework.deadline, now);
+            const isSubmitting = Boolean(homeworkSubmitting[homework.id]);
+            const errorMessage = homeworkErrors[homework.id];
+            const selectedFile = homeworkFiles[homework.id];
+
+            return (
+              <div key={homework.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h4 className="text-base font-semibold text-gray-900">{homework.title}</h4>
+                    {homework.description && (
+                      <div className="prose prose-sm max-w-none text-gray-600">
+                        <div dangerouslySetInnerHTML={{ __html: homework.description }} />
+                      </div>
+                    )}
+                  </div>
+                  {!homework.is_active && (
+                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500">
+                      Deaktiviert
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>Frist: {formatDeadline(homework.deadline)}</span>
+                  </div>
+                  <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`}>
+                    <Clock className="w-4 h-4" />
+                    <span>{label}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                  {submission ? (
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                      <span className="font-medium text-green-700">Abgegeben</span>
+                      <span>
+                        {new Date(submission.submitted_at).toLocaleString('de-DE')}
+                      </span>
+                      <a
+                        href={submission.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
+                      >
+                        <Download className="w-4 h-4" />
+                        Datei ansehen
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-600">Noch keine Abgabe vorhanden.</div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setHomeworkFiles(prev => ({ ...prev, [homework.id]: file }));
+                          setHomeworkErrors(prev => ({ ...prev, [homework.id]: null }));
+                        }}
+                        disabled={isOverdue}
+                      />
+                      <span className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white hover:bg-gray-100">
+                        <Upload className="w-4 h-4" />
+                        Datei auswaehlen
+                      </span>
+                    </label>
+                    {selectedFile && (
+                      <span className="text-xs text-gray-600 truncate max-w-[200px]">
+                        {selectedFile.name}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleSubmit(homework.id)}
+                      disabled={isOverdue || isSubmitting}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Wird hochgeladen...' : submission ? 'Erneut abgeben' : 'Hausaufgabe abgeben'}
+                    </button>
+                  </div>
+
+                  {errorMessage && (
+                    <div className="text-sm text-red-600">{errorMessage}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -341,6 +627,7 @@ export default function LessonContent({
                 </div>
               </div>
               
+              <HomeworkSection lessonId={lesson?.id ? String(lesson.id) : undefined} />
               <MaterialsSection materials={lesson.materials} />
             </div>
             
