@@ -23,6 +23,7 @@ router = APIRouter()
 # Pydantic Schemas
 # =========================================
 class HomeworkBase(BaseModel):
+    content_type: str = "mixed"
     title: str
     description: Optional[str] = None
     deadline: datetime
@@ -35,6 +36,7 @@ class HomeworkCreate(HomeworkBase):
 
 
 class HomeworkUpdate(BaseModel):
+    content_type: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     deadline: Optional[datetime] = None
@@ -102,6 +104,7 @@ async def create_homework(
         raise HTTPException(status_code=404, detail="Lektion nicht gefunden")
 
     payload = data.model_dump()
+    payload["content_type"] = payload.get("content_type") or "mixed"
     payload["deadline"] = to_naive_utc(data.deadline)
     homework = Homework(**payload)
     db.add(homework)
@@ -140,6 +143,8 @@ async def update_homework(
         raise HTTPException(status_code=404, detail="Hausaufgabe nicht gefunden")
 
     update_data = data.model_dump(exclude_unset=True)
+    if "content_type" in update_data and not update_data["content_type"]:
+        update_data["content_type"] = "mixed"
     if "deadline" in update_data and update_data["deadline"] is not None:
         update_data["deadline"] = to_naive_utc(update_data["deadline"])
     for field, value in update_data.items():

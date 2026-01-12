@@ -44,6 +44,12 @@ class Homework(Base):
     # =========================================
     # Basis-Informationen
     # =========================================
+    content_type = Column(
+        String(20),
+        default="mixed",
+        nullable=False,
+        comment="Inhaltstyp: video, text, pdf, mixed"
+    )
     title = Column(
         String(255),
         nullable=False,
