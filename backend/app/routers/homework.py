@@ -4,7 +4,7 @@
 # Hausaufgaben-Endpunkte fuer Lektionen
 
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,6 +77,16 @@ class HomeworkSubmissionResponse(BaseModel):
 
 
 # =========================================
+# Helpers
+# =========================================
+def to_naive_utc(value: datetime) -> datetime:
+    """Convert aware datetime to naive UTC for timestamp columns."""
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+# =========================================
 # Admin/Teacher Endpunkte
 # =========================================
 @router.post("", response_model=HomeworkResponse, status_code=status.HTTP_201_CREATED)
@@ -91,7 +101,9 @@ async def create_homework(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lektion nicht gefunden")
 
-    homework = Homework(**data.model_dump())
+    payload = data.model_dump()
+    payload["deadline"] = to_naive_utc(data.deadline)
+    homework = Homework(**payload)
     db.add(homework)
     await db.commit()
     await db.refresh(homework)
@@ -128,6 +140,8 @@ async def update_homework(
         raise HTTPException(status_code=404, detail="Hausaufgabe nicht gefunden")
 
     update_data = data.model_dump(exclude_unset=True)
+    if "deadline" in update_data and update_data["deadline"] is not None:
+        update_data["deadline"] = to_naive_utc(update_data["deadline"])
     for field, value in update_data.items():
         setattr(homework, field, value)
 
